@@ -1,3 +1,27 @@
-.neon
-.env.local
+# Secretos
+.env
+.env.*
+!.env.example
+neon.ts
+*.pem
+*.key
+
+# Datos locales
+data/
+!data/.gitkeep
+
+# Node (neon CLI)
 node_modules/
+package.json
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+*.log
