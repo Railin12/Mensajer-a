@@ -4,3 +4,4 @@ asyncpg==0.30.0
 python-multipart==0.0.12
 wsproto==1.2.0
 h11==0.16.0
+python-dotenv==1.0.1
