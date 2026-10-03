@@ -203,6 +203,19 @@ async def page_ia():
 async def favicon():
     return Response(status_code=204)
 
+@app.get("/api/debug/webauthn")
+async def api_debug_webauthn():
+    """SOLO para diagnostico. Quitar despues de arreglar."""
+    return {
+        "WEBAUTHN_RP_ID":   WEBAUTHN_RP_ID,
+        "WEBAUTHN_ORIGIN":  WEBAUTHN_ORIGIN,
+        "WEBAUTHN_RP_NAME": WEBAUTHN_RP_NAME,
+        "expected_domain":  "mensajer-a-1ug0.onrender.com",
+        "expected_origin":  "https://mensajer-a-1ug0.onrender.com",
+        "ok_rp_id":  WEBAUTHN_RP_ID  == "mensajer-a-1ug0.onrender.com",
+        "ok_origin": WEBAUTHN_ORIGIN == "https://mensajer-a-1ug0.onrender.com",
+    }
+
 @app.get("/api/status")
 async def api_status():
     return {"ok": True, "users": list(USERS.keys()), "max_users": len(USERS)}
