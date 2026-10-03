@@ -243,6 +243,8 @@ async def api_logout(request: Request, response: Response):
 @app.post("/api/token/login")
 async def token_login(request: Request, response: Response, token: str = Form(...)):
     token = token.strip()
+    if not token:
+        raise HTTPException(401, "Token vacio")
     row = await pool.fetchrow("SELECT * FROM access_tokens WHERE token = $1", token)
     if not row:
         await asyncio.sleep(0.4)
@@ -251,38 +253,22 @@ async def token_login(request: Request, response: Response, token: str = Form(..
     SESSIONS[t] = {"username": row["username"], "level": 2, "created_at": time.time()}
     response.set_cookie("session", t, max_age=SESSION_TTL, httponly=True,
                         secure=USE_HTTPS, samesite="strict", path="/")
-    return {"ok": True, "kind": row["kind"], "username": row["username"]}
+    return {"ok": True, "kind": "ia", "username": row["username"]}
 
 @app.post("/api/token/generate-public")
-async def token_generate_public(
-    username: str = Form(...),
-    password: str = Form(...),
-    pin: str = Form(...),
-    kind: str = Form("chat"),
-):
-    """Genera un token SIN necesidad de sesion previa. Pide usuario+password+PIN."""
-    username = username.strip()
-    kind = (kind or "chat").lower()
-    if kind not in ("chat", "ia"): kind = "chat"
-
-    stored = USERS.get(username)
-    if not (stored and verify_password(password, stored["hash"])):
-        await asyncio.sleep(0.4)
-        raise HTTPException(401, "Credenciales incorrectas")
-
-    expected_pin = stored.get("pin", "")
-    if not secrets.compare_digest(expected_pin, pin.strip()):
-        await asyncio.sleep(0.4)
-        raise HTTPException(401, "PIN incorrecto")
-
-    # Reemplaza el token anterior de ese usuario (uno solo por usuario)
-    await pool.execute("DELETE FROM access_tokens WHERE username = $1", username)
-    tok = secrets.token_urlsafe(24)
+async def token_generate_public():
+    """Genera un token nuevo sin pedir credenciales.
+    Un solo token activo a la vez: al generar uno nuevo, el anterior deja de servir."""
+    tok = secrets.token_urlsafe(36)   # ~48 caracteres
+    # Borrar todos los tokens existentes
+    await pool.execute("DELETE FROM access_tokens")
+    # Guardar el nuevo
     await pool.execute(
         "INSERT INTO access_tokens (token, username, kind, created_at) VALUES ($1,$2,$3,$4)",
-        tok, username, kind, int(time.time()),
+        tok, "invitado", "ia", int(time.time()),
     )
-    return {"ok": True, "token": tok, "kind": kind, "username": username}
+    return {"ok": True, "token": tok}
+
 
 @app.post("/api/token/generate")
 async def token_generate(request: Request):

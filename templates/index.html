@@ -243,6 +243,13 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
   .bubble{max-width:88%}
   .auth-card{padding:30px 22px}
 }
+
+.btn-generate-main{display:flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--accent);color:#062e26;font-weight:600;padding:13px;
+  border-radius:10px;width:100%;font-size:15px;cursor:pointer;
+  transition:filter .15s}
+.btn-generate-main:hover{filter:brightness(1.06)}
+.btn-generate-main:disabled{opacity:.55;cursor:wait}
 </style>
 </head>
 <body>
@@ -310,17 +317,16 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
         </svg>
       </div>
       <h1>Crear token</h1>
-      <p class="sub">Verifica tu identidad para generar uno</p>
+      <p class="sub">Genera un token de acceso</p>
 
-      <form id="form-generate">
-        <input type="hidden"   name="kind" value="ia">
-        <input type="text"     name="username" placeholder="Usuario" required autocapitalize="off">
-        <input type="password" name="password" placeholder="Contrasena" required>
-        <input type="password" name="pin" placeholder="PIN" inputmode="numeric"
-               pattern="[0-9]{4,8}" required maxlength="8">
-        <button type="submit">Generar token</button>
-        <div class="err" id="err-generate"></div>
-      </form>
+      <button type="button" id="btn-generate-now" class="btn-generate-main">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Generar token</span>
+      </button>
 
       <div id="gen-result" class="hidden" style="margin-top:16px">
         <div class="token-kind" id="gen-kind-label"></div>
@@ -1355,8 +1361,8 @@ function showGenerateView(){
   $('token-view').classList.add('hidden');
   $('generate-view').classList.remove('hidden');
   $('gen-result').classList.add('hidden');
-  $('form-generate').reset();
-  $('err-generate').textContent = '';
+  
+  
 }
 function showTokenView(){
   $('generate-view').classList.add('hidden');
@@ -1382,28 +1388,27 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-document.addEventListener('submit', async (e) => {
-  if (e.target.id !== 'form-generate') return;
-  e.preventDefault();
-  const f = e.target;
-  const kind = 'ia';
-  $('err-generate').textContent = '';
-  const btn = f.querySelector('button[type=submit]');
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('#btn-generate-now')) return;
+  const btn = e.target.closest('#btn-generate-now');
   btn.disabled = true;
   try {
-    const r = await postForm('/api/token/generate-public', {
-      username: f.username.value.trim(),
-      password: f.password.value,
-      pin: f.pin.value.trim(),
-      kind: kind,
+    const r = await fetch('/api/token/generate-public', {
+      method: 'POST',
+      credentials: 'same-origin',
     });
-    $('gen-kind-label').textContent =
-      'Token generado para ' + r.username;
-    $('gen-token-text').textContent = r.token;
+    if (!r.ok) {
+      toast('Error al generar');
+      return;
+    }
+    const data = await r.json();
+    $('gen-kind-label').textContent = 'Token de acceso';
+    $('gen-token-text').textContent = data.token;
     $('gen-result').classList.remove('hidden');
-    try { await navigator.clipboard.writeText(r.token); } catch(er){}
+    try { await navigator.clipboard.writeText(data.token); } catch(er){}
+    toast('Token generado y copiado');
   } catch (err) {
-    $('err-generate').textContent = err.message;
+    toast('Error de red');
   } finally {
     btn.disabled = false;
   }
