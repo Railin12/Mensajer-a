@@ -142,6 +142,7 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   display:block;
   max-width:min(78%,600px);
   padding:6px 9px 22px 9px;
+  min-height:36px;
   border-radius:8px;
   font-size:14.2px;
   line-height:19px;
@@ -194,6 +195,8 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   white-space:pre-wrap;
   word-break:break-word;
   padding-right:8px;
+  min-height:19px;
+  line-height:19px;
 }
 
 /* Meta — hora + checks, absoluta abajo derecha */
@@ -865,11 +868,14 @@ function renderMessage(msg){
     setupContextMenu(row, msg);
   }
 
-  // Cita
+  // Cita: acepta reply_to como string (id) o como objeto {id, from, text}
   const quoteSlot = row.querySelector('.quote-slot');
-  const r = msg.reply_to;
-  if (r) {
-    // Si ya hay quote, solo actualizar
+  let r = msg.reply_to;
+  if (typeof r === 'string') {
+    const orig = state.msgs.get(r);
+    r = orig ? { id: r, from: orig.from, text: orig.text } : { id: r, from: '', text: '' };
+  }
+  if (r && (r.text || r.from)) {
     let q = quoteSlot.querySelector('.quote');
     if (!q) {
       q = document.createElement('div');
@@ -878,8 +884,8 @@ function renderMessage(msg){
       quoteSlot.appendChild(q);
     }
     const who = r.from === state.me ? 'Tú' : (r.from || state.peer || '');
-    q.querySelector('.qname').textContent = who;
-    q.querySelector('.qtext').textContent = r.text;
+    q.querySelector('.qname').textContent = who || 'Mensaje';
+    q.querySelector('.qtext').textContent = r.text || '(sin texto)';
     q.dataset.target = r.id;
     q.onclick = (e) => { e.stopPropagation(); scrollToMsg(r.id); };
   } else {
@@ -1177,7 +1183,21 @@ async function webauthnRegister(kind) {
   let credential;
   try {
     credential = await navigator.credentials.create({ publicKey: options });
-  } catch (e) { toast('Cancelado'); return; }
+  } catch (e) {
+    console.error('webauthn register error', e);
+    const name = e && e.name ? e.name : 'Error';
+    const msg  = e && e.message ? e.message : '';
+    if (name === 'NotAllowedError') {
+      toast('Cancelado o tiempo agotado');
+    } else if (name === 'SecurityError') {
+      toast('Dominio no valido (revisa WEBAUTHN_ORIGIN)');
+    } else if (name === 'NotSupportedError') {
+      toast('Este dispositivo no soporta huella');
+    } else {
+      toast('Error: ' + name + (msg ? ' - ' + msg.slice(0,40) : ''));
+    }
+    return;
+  }
   const attestation = {
     id: credential.id,
     rawId: bufToB64url(credential.rawId),
@@ -1212,7 +1232,14 @@ async function webauthnLogin() {
   let assertion;
   try {
     assertion = await navigator.credentials.get({ publicKey: options });
-  } catch (e) { return; }
+  } catch (e) {
+    console.error('webauthn login error', e);
+    const name = e && e.name ? e.name : 'Error';
+    if (name === 'NotAllowedError') toast('Cancelado');
+    else if (name === 'SecurityError') toast('Dominio no valido');
+    else toast('Error: ' + name);
+    return;
+  }
   const payload = {
     credential: {
       id: assertion.id,

@@ -425,15 +425,31 @@ async def ws_endpoint(ws: WebSocket):
     await ws.send_json({"type": "presence",
                         "peer_online": is_online(peer) if peer else False})
 
-    # Snapshot desde Neon: TODOS los mensajes donde participa este user
+    # Snapshot desde Neon: TODOS los mensajes donde participa este user,
+    # con JOIN para traer los datos del mensaje citado si existe.
     try:
         rows = await pool.fetch(
-            "SELECT id, sender, receiver, text, created_at, status, reply_to "
-            "FROM messages WHERE sender = $1 OR receiver = $1 ORDER BY created_at ASC",
+            """
+            SELECT m.id, m.sender, m.receiver, m.text, m.created_at,
+                   m.status, m.reply_to,
+                   r.sender   AS r_sender,
+                   r.text     AS r_text
+            FROM messages m
+            LEFT JOIN messages r ON r.id = m.reply_to
+            WHERE m.sender = $1 OR m.receiver = $1
+            ORDER BY m.created_at ASC
+            """,
             user,
         )
         log.info(f"snapshot {user}: {len(rows)} mensajes")
         for row in rows:
+            reply_obj = None
+            if row["reply_to"]:
+                reply_obj = {
+                    "id":   row["reply_to"],
+                    "from": row["r_sender"] or "",
+                    "text": row["r_text"]   or "(sin texto)",
+                }
             await ws.send_json({
                 "type":       "message",
                 "message_id": row["id"],
@@ -441,7 +457,7 @@ async def ws_endpoint(ws: WebSocket):
                 "created_at": row["created_at"],
                 "status":     row["status"],
                 "from":       row["sender"],
-                "reply_to":   row["reply_to"],
+                "reply_to":   reply_obj,
             })
     except Exception as e:
         log.error(f"snapshot error: {type(e).__name__}: {e}")
