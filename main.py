@@ -420,8 +420,8 @@ async def send_webpush(username: str):
         try:
             webpush(
                 subscription_info=json.loads(r["subscription"]),
-                data=json.dumps({"title": "Nuevo mensaje",
-                                 "body": "Tienes un mensaje nuevo"}),
+                data=json.dumps({"title": "Aviso",
+                                 "body": "Tienes una notificacion nueva"}),
                 vapid_private_key=VAPID_PRIVATE,
                 vapid_claims={"sub": VAPID_SUBJECT},
             )

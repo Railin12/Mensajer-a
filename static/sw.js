@@ -3,7 +3,7 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 // Push real (funciona con la app cerrada)
 self.addEventListener('push', (event) => {
-  let data = { title: 'Nuevo mensaje', body: 'Tienes un mensaje nuevo' };
+  let data = { title: 'Aviso', body: 'Tienes una notificacion nueva' };
   try {
     if (event.data) {
       const p = event.data.json();

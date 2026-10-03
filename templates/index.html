@@ -275,9 +275,13 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
       </svg>
       <span>Inicio rapido con huella</span>
     </button>
-    <button type="button" class="link tiny" id="btn-to-login">Acceso con credenciales</button>
     <p class="note">Al acceder aceptas las <a href="/politicas" target="_blank"
        style="color:var(--accent);text-decoration:none">politicas y condiciones</a>.</p>
+    <div id="embedded-warning" class="hidden" style="margin-top:18px;padding:14px;background:rgba(241,92,109,.1);border:1px solid rgba(241,92,109,.3);border-radius:10px;font-size:12.5px;line-height:1.5;color:#ffb0b8">
+      <strong style="color:#ff7a8a">Aviso</strong><br>
+      Estas abriendo esto dentro de otra aplicacion. Las funciones de seguridad (huella, notificaciones) no funcionan aqui.<br>
+      <a href="#" id="open-chrome" style="color:#00a884;text-decoration:underline;display:inline-block;margin-top:6px">Abrir en Chrome</a>
+    </div>
   </div>
 </section>
 
@@ -376,7 +380,7 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
         </svg>
       </button>
       <div class="input-field">
-        <input type="text" id="input-msg" placeholder="Escribe un mensaje"
+        <input type="text" id="input-msg" placeholder="Escribe algo"
                autocomplete="off" maxlength="4000">
       </div>
       <button id="btn-send" title="Enviar">
@@ -530,7 +534,7 @@ $('form-token').addEventListener('submit', async ev => {
   finally { btn.disabled = false; }
 });
 
-$('btn-to-login').addEventListener('click', () => showPanel('login'));
+
 $('btn-login-back').addEventListener('click', () => showPanel('token'));
 
 /* ══ LOGIN ══ */
@@ -1260,12 +1264,37 @@ resetIdle();
 
 /* Bootstrap: ¿ya hay sesion? */
 (async () => {
+  const wantsLogin = new URLSearchParams(location.search).get('login') === '1';
   try {
     const me = await getJSON('/api/me');
     if (me.authenticated && me.level >= 2) await enterApp(me);
     else if (me.authenticated && me.level === 1) showPanel('pin');
-    else showPanel('token');
-  } catch(e){ showPanel('token'); }
+    else showPanel(wantsLogin ? 'login' : 'token');
+  } catch(e){ showPanel(wantsLogin ? 'login' : 'token'); }
+
+  // Detectar navegador embebido
+  try {
+    const ua = navigator.userAgent || '';
+    const embedded =
+      /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|Twitter/i.test(ua) ||
+      (/Android/i.test(ua) && /\bwv\b/i.test(ua));
+    if (embedded) {
+      const w = document.getElementById('embedded-warning');
+      if (w) w.classList.remove('hidden');
+      const btn = document.getElementById('open-chrome');
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const url = location.href;
+          // Intentar abrir en Chrome
+          if (/Android/i.test(ua)) {
+            location.href = 'intent://' + url.replace(/^https?:\/\//, '') +
+              '#Intent;scheme=https;package=com.android.chrome;end';
+          }
+        });
+      }
+    }
+  } catch(e){}
 })();
 </script>
 </body>
