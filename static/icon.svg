@@ -6,8 +6,7 @@
     </linearGradient>
   </defs>
   <rect width="192" height="192" rx="42" fill="url(#g)"/>
-  <path d="M96 34c-32 0-58 22-58 50 0 15 8 28 21 37l-5 27 30-15c4 1 8 1 12 1 32 0 58-22 58-50S128 34 96 34z"
-        fill="#ffffff"/>
+  <path d="M96 34c-32 0-58 22-58 50 0 15 8 28 21 37l-5 27 30-15c4 1 8 1 12 1 32 0 58-22 58-50S128 34 96 34z" fill="#ffffff"/>
   <circle cx="76" cy="86" r="6" fill="#00a884"/>
   <circle cx="96" cy="86" r="6" fill="#00a884"/>
   <circle cx="116" cy="86" r="6" fill="#00a884"/>

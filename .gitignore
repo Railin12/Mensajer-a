@@ -25,3 +25,8 @@ venv/
 # Sistema
 .DS_Store
 *.log
+
+# Backups
+*.tar.gz
+*.zip
+backup_*

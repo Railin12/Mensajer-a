@@ -6,3 +6,5 @@ wsproto==1.2.0
 h11==0.16.0
 python-dotenv==1.0.1
 webauthn==2.2.0
+pywebpush==2.0.0
+py-vapid==1.9.4

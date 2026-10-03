@@ -6,27 +6,21 @@
 <title>Proximamente</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(1200px 600px at 20% -10%,#0d3b34 0,transparent 55%),
              radial-gradient(900px 500px at 110% 110%,#0a1f24 0,transparent 55%),#0b141a;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  color:#e9edef;padding:24px;overflow:hidden
-}
-.card{
-  max-width:520px;width:100%;background:#111b21;border:1px solid #222d34;
+  color:#e9edef;padding:24px;overflow:hidden}
+.card{max-width:520px;width:100%;background:#111b21;border:1px solid #222d34;
   border-radius:18px;padding:44px 32px;text-align:center;
   box-shadow:0 24px 64px rgba(0,0,0,.6);
-  animation:in .5s cubic-bezier(.2,.9,.3,1.05)
-}
+  animation:in .5s cubic-bezier(.2,.9,.3,1.05)}
 @keyframes in{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
-.logo{
-  width:80px;height:80px;margin:0 auto 22px;border-radius:50%;
+.logo{width:80px;height:80px;margin:0 auto 22px;border-radius:50%;
   background:linear-gradient(135deg,#00a884,#005c4b);
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 8px 24px rgba(0,168,132,.3);
-  animation:pulse 2.5s ease-in-out infinite
-}
+  animation:pulse 2.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 .logo svg{width:44px;height:44px;stroke:#062e26;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}

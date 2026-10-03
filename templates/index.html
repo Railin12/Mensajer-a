@@ -4,27 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b141a">
-<title>Mensajeria</title>
+<title>Acceso</title>
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{
-  --bg:#0b141a;--panel:#111b21;--panel2:#202c33;--input:#2a3942;
+:root{--bg:#0b141a;--panel:#111b21;--panel2:#202c33;--input:#2a3942;
   --border:#222d34;--text:#e9edef;--text2:#8696a0;--accent:#00a884;
-  --bubout:#005c4b;--bubin:#202c33;--check:#53bdeb;--danger:#f15c6d;
-}
+  --bubout:#005c4b;--bubin:#202c33;--check:#53bdeb;--danger:#f15c6d}
 html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14.2px}
 .hidden{display:none!important}
 button{font:inherit;border:0;background:none;color:inherit;cursor:pointer;font-family:inherit}
-input{font:inherit;border:0;outline:none;background:transparent;color:inherit;font-family:inherit}
+input,textarea{font:inherit;border:0;outline:none;background:transparent;color:inherit;font-family:inherit}
 
-/* ── Auth ── */
+/* Auth */
 .panel{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(1200px 600px at 20% -10%,#0d3b34 0,transparent 55%),
              radial-gradient(900px 500px at 110% 110%,#0a1f24 0,transparent 55%),var(--bg);
-  padding:24px;overflow-y:auto}
+  padding:24px;overflow-y:auto;z-index:1}
+.panel#panel-app{position:fixed;inset:0;display:flex;padding:0;background:var(--bg);z-index:2;overflow:hidden}
 .auth-card{width:100%;max-width:400px;padding:36px 32px;background:var(--panel);
   border:1px solid var(--border);border-radius:16px;
   box-shadow:0 24px 64px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.3);
@@ -39,17 +38,18 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
 .auth-card input::placeholder{color:#7b8a93}
 .auth-card input:focus{border-color:var(--accent);background:#25323a}
 .auth-card form button[type=submit]{background:var(--accent);color:#062e26;font-weight:600;
-  padding:13px;border-radius:10px;margin-top:6px;font-size:15px;transition:filter .15s,transform .06s}
+  padding:13px;border-radius:10px;margin-top:6px;font-size:15px;transition:filter .15s}
 .auth-card form button[type=submit]:hover{filter:brightness(1.06)}
 .auth-card form button[type=submit]:disabled{opacity:.55;cursor:wait}
 .err{color:var(--danger);font-size:12.5px;text-align:center;min-height:16px}
 .note{color:var(--text2);font-size:11.5px;text-align:center;margin-top:22px;line-height:1.55}
-.link{color:var(--accent);font-size:14px;font-weight:500;margin-top:16px;
-  display:block;width:100%;text-align:center;padding:8px 0;border-radius:8px;transition:background .15s}
+.link{color:var(--accent);font-size:13px;margin-top:14px;display:block;width:100%;
+  text-align:center;padding:8px 0;border-radius:8px;transition:background .15s}
 .link:hover{background:rgba(0,168,132,.08)}
+.link.tiny{font-size:11.5px;color:var(--text2);margin-top:22px}
+.link.tiny:hover{color:var(--text)}
 
-/* ── App ── */
-.panel#panel-app{position:fixed;inset:0;display:flex;padding:0;background:var(--bg);z-index:2;overflow:hidden}
+/* App */
 #sidebar{width:min(420px,38vw);min-width:340px;display:flex;flex-direction:column;
   background:var(--panel);border-right:1px solid var(--border);flex-shrink:0}
 @media (max-width:900px){#sidebar{min-width:0}}
@@ -90,8 +90,7 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   background:var(--panel2);border-bottom:1px solid var(--border);height:60px;flex-shrink:0}
 .back-btn{display:none;width:36px;height:36px;border-radius:50%;color:var(--text2);
   align-items:center;justify-content:center;margin-left:-6px}
-.back-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;
-  stroke-linecap:round;stroke-linejoin:round}
+.back-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .chat-title{flex:1;min-width:0;padding-left:2px}
 .chat-title .name{font-weight:500;font-size:16px;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;line-height:1.2}
@@ -99,145 +98,53 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
 .peer-status.online{color:var(--accent)}
 .peer-status.typing{color:var(--accent);font-style:italic}
 
-/* ══════ MENSAJES — LAYOUT CORREGIDO ══════ */
-#messages{
-  flex:1;overflow-y:auto;overflow-x:hidden;
-  padding:14px 10px;
-  display:flex;flex-direction:column;gap:3px;
-  background-color:#0b141a;
-  background-image:
-    radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+#messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 10px;
+  display:flex;flex-direction:column;gap:3px;background-color:#0b141a;
+  background-image:radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
     radial-gradient(rgba(255,255,255,.015) 1px,transparent 1px);
-  background-size:24px 24px,60px 60px;
-  background-position:0 0,12px 12px;
-  scrollbar-width:thin;scrollbar-color:#374248 transparent;
-  -webkit-overflow-scrolling:touch;
-}
+  background-size:24px 24px,60px 60px;background-position:0 0,12px 12px;
+  scrollbar-width:thin;scrollbar-color:#374248 transparent;-webkit-overflow-scrolling:touch}
 @media (min-width:900px){#messages{padding:18px 8%}}
 #messages::-webkit-scrollbar{width:6px}
 #messages::-webkit-scrollbar-thumb{background:#374248;border-radius:3px}
-
-.day-sep{
-  align-self:center;margin:10px 0 6px;padding:5px 12px;
-  background:rgba(32,44,51,.85);border-radius:8px;
-  font-size:11.5px;color:var(--text2);font-weight:500;
-  letter-spacing:.2px;text-transform:uppercase;
-  box-shadow:0 1px 0 rgba(0,0,0,.15);
-}
-
-/* Cada mensaje es un .msg en flex-row */
-.msg{
-  position:relative;
-  display:flex;
-  width:100%;
-  padding:0;
-  flex-shrink:0;
-}
-.msg.in  {justify-content:flex-start}
-.msg.out {justify-content:flex-end}
-
-/* Burbuja — la clave: el texto va DESPUÉS del bloque de cita */
-.bubble{
-  position:relative;
-  display:block;
-  max-width:min(78%,600px);
-  padding:6px 9px 22px 9px;
-  min-height:36px;
-  border-radius:8px;
-  font-size:14.2px;
-  line-height:19px;
-  color:var(--text);
-  word-wrap:break-word;
-  word-break:break-word;
-  box-shadow:0 1px .5px rgba(11,20,26,.2);
-  user-select:none;
-  -webkit-user-select:none;
-  -webkit-touch-callout:none;
-  touch-action:pan-y;
-  will-change:auto;
-}
-.msg.in  .bubble{background:var(--bubin); border-top-left-radius:2px}
+.day-sep{align-self:center;margin:10px 0 6px;padding:5px 12px;
+  background:rgba(32,44,51,.85);border-radius:8px;font-size:11.5px;color:var(--text2);
+  font-weight:500;letter-spacing:.2px;text-transform:uppercase;box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.msg{position:relative;display:flex;width:100%;padding:0;flex-shrink:0}
+.msg.in{justify-content:flex-start}
+.msg.out{justify-content:flex-end}
+.bubble{position:relative;display:block;max-width:min(78%,600px);
+  padding:6px 9px 22px 9px;min-height:36px;border-radius:8px;font-size:14.2px;
+  line-height:19px;color:var(--text);word-wrap:break-word;word-break:break-word;
+  box-shadow:0 1px .5px rgba(11,20,26,.2);user-select:none;-webkit-user-select:none;
+  -webkit-touch-callout:none;touch-action:pan-y}
+.msg.in .bubble{background:var(--bubin);border-top-left-radius:2px}
 .msg.out .bubble{background:var(--bubout);border-top-right-radius:2px}
-
-/* Cita — siempre arriba, ancho completo, block */
-.quote{
-  display:block;
-  background:rgba(0,0,0,.22);
-  border-left:3px solid #06cf9c;
-  border-radius:4px;
-  padding:5px 8px;
-  margin:0 0 6px 0;
-  font-size:13px;
-  line-height:1.3;
-  cursor:pointer;
-}
-.quote .qname{
-  display:block;
-  color:#06cf9c;
-  font-weight:600;
-  font-size:12.5px;
-  margin-bottom:2px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.quote .qtext{
-  display:block;
-  color:rgba(233,237,239,.75);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-/* Cuerpo del mensaje — block debajo del quote */
-.body{
-  display:block;
-  white-space:pre-wrap;
-  word-break:break-word;
-  padding-right:8px;
-  min-height:19px;
-  line-height:19px;
-}
-
-/* Meta — hora + checks, absoluta abajo derecha */
-.meta{
-  position:absolute;
-  right:8px;
-  bottom:4px;
-  display:flex;
-  align-items:center;
-  gap:3px;
-  font-size:11px;
-  line-height:14px;
-  color:rgba(233,237,239,.6);
-  white-space:nowrap;
-  user-select:none;
-  pointer-events:none;
-}
+.quote{display:block;background:rgba(0,0,0,.22);border-left:3px solid #06cf9c;
+  border-radius:4px;padding:5px 8px;margin:0 0 6px 0;font-size:13px;
+  line-height:1.3;cursor:pointer}
+.quote .qname{display:block;color:#06cf9c;font-weight:600;font-size:12.5px;
+  margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quote .qtext{display:block;color:rgba(233,237,239,.75);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.body{display:block;white-space:pre-wrap;word-break:break-word;padding-right:8px;
+  min-height:19px;line-height:19px}
+.meta{position:absolute;right:8px;bottom:4px;display:flex;align-items:center;gap:3px;
+  font-size:11px;line-height:14px;color:rgba(233,237,239,.6);white-space:nowrap;
+  user-select:none;pointer-events:none}
 .msg.out .meta{color:rgba(233,237,239,.7)}
 .meta .time{font-variant-numeric:tabular-nums}
 .meta .checks{display:inline-flex;align-items:center;color:rgba(233,237,239,.7)}
 .meta .checks.read{color:var(--check)}
 .meta .checks svg{display:block;width:16px;height:11px}
-
-/* Flecha de responder — absoluta a la izquierda */
-.swipe-arrow{
-  position:absolute;
-  left:6px;top:50%;
-  transform:translateY(-50%) scale(.5);
-  width:32px;height:32px;border-radius:50%;
-  background:rgba(0,168,132,.15);
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;
-  transition:opacity .15s,transform .15s,background .15s;
-  color:#00a884;z-index:1;
-}
+.swipe-arrow{position:absolute;left:6px;top:50%;transform:translateY(-50%) scale(.5);
+  width:32px;height:32px;border-radius:50%;background:rgba(0,168,132,.15);
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;
+  transition:opacity .15s,transform .15s,background .15s;color:#00a884;z-index:1}
 .swipe-arrow.show{opacity:1;transform:translateY(-50%) scale(1)}
 .swipe-arrow.armed{background:rgba(0,168,132,.35);transform:translateY(-50%) scale(1.15)}
 .swipe-arrow svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.5;
   stroke-linecap:round;stroke-linejoin:round}
-
-/* Typing bubble */
 #typing-wrap{display:none;padding:0 10px 4px;justify-content:flex-start}
 #typing-wrap.show{display:flex}
 #typing-wrap .bub{background:var(--bubin);border-radius:16px;border-top-left-radius:4px;
@@ -247,22 +154,16 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
 #typing-wrap .bub span:nth-child(2){animation-delay:.2s}
 #typing-wrap .bub span:nth-child(3){animation-delay:.4s}
 @keyframes typDot{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
-
-/* Barra de cita encima del input */
 .reply-bar{display:none;align-items:center;gap:10px;padding:8px 14px;
   background:var(--panel2);border-top:1px solid var(--border);flex-shrink:0}
 .reply-bar.show{display:flex}
 .reply-bar .strip{width:3px;height:38px;border-radius:2px;background:#06cf9c;flex-shrink:0}
 .reply-bar .info{flex:1;min-width:0;line-height:1.25}
 .reply-bar .rname{color:#06cf9c;font-size:12.5px;font-weight:600;margin-bottom:2px}
-.reply-bar .rtext{color:var(--text2);font-size:13px;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
+.reply-bar .rtext{color:var(--text2);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .reply-bar .close{width:32px;height:32px;color:var(--text2);flex-shrink:0;border-radius:50%}
 .reply-bar .close:hover{background:rgba(255,255,255,.06);color:var(--text)}
-.reply-bar .close svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;
-  stroke-linecap:round;stroke-linejoin:round}
-
-/* Input */
+.reply-bar .close svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
 .chat-input{display:flex;align-items:flex-end;gap:6px;padding:8px 12px;
   background:var(--panel2);flex-shrink:0;padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .chat-input .icon-btn{width:44px;height:44px;color:var(--text2)}
@@ -271,21 +172,15 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
 .input-field input{flex:1;font-size:15px;line-height:20px;min-width:0;padding:11px 0}
 .input-field input::placeholder{color:#7b8a93}
 #btn-send{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:var(--accent);
-  color:#062e26;display:flex;align-items:center;justify-content:center;
-  transition:filter .12s,transform .06s}
+  color:#062e26;display:flex;align-items:center;justify-content:center;transition:filter .12s}
 #btn-send:hover{filter:brightness(1.06)}
-#btn-send:active{transform:scale(.94)}
 #btn-send svg{width:22px;height:22px;fill:currentColor}
-
-/* Emoji picker */
 .emoji-picker{position:absolute;left:12px;right:12px;bottom:70px;max-height:min(320px,50vh);
   overflow-y:auto;background:var(--panel2);border:1px solid var(--border);border-radius:14px;
   padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));
   gap:3px;box-shadow:0 12px 40px rgba(0,0,0,.55);z-index:20}
 .emoji-picker button{font-size:24px;padding:6px;border-radius:8px;line-height:1}
 .emoji-picker button:hover{background:rgba(255,255,255,.08)}
-
-/* Menú contextual */
 .ctx-menu{position:fixed;background:var(--panel2);border:1px solid var(--border);
   border-radius:10px;padding:6px;box-shadow:0 8px 28px rgba(0,0,0,.5);
   z-index:200;min-width:160px}
@@ -294,12 +189,48 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
 .ctx-menu button:hover{background:rgba(255,255,255,.08)}
 .ctx-menu button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-
-/* Toast */
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#202c33;
   color:var(--text);padding:11px 20px;border-radius:22px;
-  box-shadow:0 8px 28px rgba(0,0,0,.55);font-size:13.5px;z-index:100;
+  box-shadow:0 8px 28px rgba(0,0,0,.55);font-size:13.5px;z-index:400;
   animation:cardIn .25s;max-width:90vw;text-align:center}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;
+  justify-content:center;z-index:300;padding:20px}
+.modal-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  width:100%;max-width:440px;max-height:88vh;overflow-y:auto;padding:22px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-card h2{font-size:18px;margin-bottom:18px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+.setting-label{flex:1;min-width:0}
+.setting-label > div:first-child{font-size:15px}
+.setting-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.switch{position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:#3b4a54;border-radius:13px;transition:.2s;cursor:pointer}
+.switch span::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;
+  background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked + span{background:var(--accent)}
+.switch input:checked + span::before{transform:translateX(18px)}
+.setting-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.setting-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--input);padding:12px 14px;border-radius:10px;font-size:14px;
+  text-align:left;width:100%}
+.setting-btn:hover{background:#33424b}
+.fp-status{color:var(--text2);font-size:12px}
+.fp-status.ok{color:var(--accent)}
+.danger-zone{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);text-align:center}
+.danger-link{color:#f15c6d;font-size:13px;padding:8px 12px;border-radius:8px;transition:background .15s}
+.danger-link:hover{background:rgba(241,92,109,.1)}
+.token-box{background:var(--input);border-radius:10px;padding:14px;margin:8px 0 14px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+  word-break:break-all;line-height:1.5;color:var(--text);
+  border:1px solid #33424b}
+.token-copy{background:var(--accent);color:#062e26;font-weight:600;
+  padding:10px;border-radius:8px;width:100%;margin-bottom:8px}
+.token-kind{background:#202c33;color:#8696a0;padding:6px 12px;border-radius:8px;
+  font-size:12px;display:inline-block;margin-bottom:12px}
+.modal-foot{margin-top:18px;display:flex;justify-content:flex-end}
 
 @media (max-width:760px){
   #sidebar{width:100%;min-width:0;border-right:0}
@@ -312,67 +243,12 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   .bubble{max-width:88%}
   .auth-card{padding:30px 22px}
 }
-
-/* Modal de ajustes */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
-.modal-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:100%;max-width:420px;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.6)}
-.modal-card h2{font-size:18px;margin-bottom:18px}
-.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
-.setting-label{flex:1;min-width:0}
-.setting-label > div:first-child{font-size:15px}
-.setting-sub{font-size:12px;color:var(--text2);margin-top:3px}
-.switch{position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0}
-.switch input{opacity:0;width:0;height:0}
-.switch span{position:absolute;inset:0;background:#3b4a54;border-radius:13px;transition:.2s;cursor:pointer}
-.switch span::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-.switch input:checked + span{background:var(--accent)}
-.switch input:checked + span::before{transform:translateX(18px)}
-.setting-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
-.setting-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--input);padding:12px 14px;border-radius:10px;font-size:14px;text-align:left;width:100%}
-.setting-btn:hover{background:#33424b}
-.fp-status{color:var(--text2);font-size:12px}
-.fp-status.ok{color:var(--accent)}
-.modal-foot{margin-top:18px;display:flex;justify-content:flex-end}
-.modal-foot .link{margin:0;width:auto;padding:8px 14px;background:var(--input);border-radius:8px}
-
-
-.danger-zone{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);text-align:center}
-.danger-link{color:#f15c6d;font-size:13px;padding:8px 12px;border-radius:8px;transition:background .15s}
-.danger-link:hover{background:rgba(241,92,109,.1);color:#ff7a8a}
 </style>
 </head>
 <body>
 
-<section id="panel-login" class="panel">
-  <div class="auth-card">
-    <div class="auth-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-           stroke-linecap="round" stroke-linejoin="round" width="52" height="52">
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-      </svg>
-    </div>
-    <h1>Mensajeria</h1>
-    <p class="sub">Canal privado</p>
-    <form id="form-login" autocomplete="off">
-      <input type="text" name="username" placeholder="Usuario" autocomplete="username" required>
-      <input type="password" name="password" placeholder="Contrasena" autocomplete="current-password" required>
-      <button type="submit">Continuar</button>
-      <div class="err" id="err-login"></div>
-    </form>
-    <button type="button" class="link hidden" id="btn-fingerprint" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 11v2a6 6 0 0 1-1 3.5"/>
-        <path d="M8 12a4 4 0 0 1 8 0v2a8 8 0 0 1-1.5 4.5"/>
-        <path d="M5 13a7 7 0 0 1 14 0v2a10 10 0 0 1-1.5 5"/>
-        <path d="M2 14a10 10 0 0 1 20 0"/>
-      </svg>
-      <span>Inicio rapido con huella</span>
-    </button>
-    <p class="note">Los mensajes se conservan hasta que pulses el boton de borrar.</p>
-  </div>
-</section>
-
-<section id="panel-pin" class="panel hidden">
+<!-- ══ Pantalla 1: Token ══ -->
+<section id="panel-token" class="panel">
   <div class="auth-card">
     <div class="auth-logo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -381,6 +257,48 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
     </div>
+    <h1>Acceso</h1>
+    <p class="sub">Pega tu token de acceso</p>
+    <form id="form-token" autocomplete="off">
+      <input type="text" name="token" placeholder="Token de acceso"
+             autocapitalize="off" autocomplete="off" required>
+      <button type="submit">Acceder</button>
+      <div class="err" id="err-token"></div>
+    </form>
+    <button type="button" class="link" id="btn-fingerprint" style="display:none;align-items:center;justify-content:center;gap:8px;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 11v2a6 6 0 0 1-1 3.5"/>
+        <path d="M8 12a4 4 0 0 1 8 0v2a8 8 0 0 1-1.5 4.5"/>
+        <path d="M5 13a7 7 0 0 1 14 0v2a10 10 0 0 1-1.5 5"/>
+        <path d="M2 14a10 10 0 0 1 20 0"/>
+      </svg>
+      <span>Inicio rapido con huella</span>
+    </button>
+    <button type="button" class="link tiny" id="btn-to-login">Acceso con credenciales</button>
+    <p class="note">Al acceder aceptas las <a href="/politicas" target="_blank"
+       style="color:var(--accent);text-decoration:none">politicas y condiciones</a>.</p>
+  </div>
+</section>
+
+<!-- ══ Pantalla 2: Login tradicional ══ -->
+<section id="panel-login" class="panel hidden">
+  <div class="auth-card">
+    <h1>Acceso</h1>
+    <p class="sub">Introduce tus credenciales</p>
+    <form id="form-login" autocomplete="off">
+      <input type="text" name="username" placeholder="Usuario" autocomplete="username" required>
+      <input type="password" name="password" placeholder="Contrasena" autocomplete="current-password" required>
+      <button type="submit">Continuar</button>
+      <div class="err" id="err-login"></div>
+    </form>
+    <button type="button" class="link" id="btn-login-back">Volver</button>
+  </div>
+</section>
+
+<!-- ══ Pantalla 3: PIN ══ -->
+<section id="panel-pin" class="panel hidden">
+  <div class="auth-card">
     <h1>Verificacion</h1>
     <p class="sub">Introduce tu PIN</p>
     <form id="form-pin" autocomplete="off">
@@ -393,11 +311,12 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   </div>
 </section>
 
+<!-- ══ Pantalla 4: App ══ -->
 <section id="panel-app" class="panel hidden">
   <aside id="sidebar">
     <header class="sidebar-header">
       <div class="avatar" id="me-avatar">&middot;</div>
-      <div class="sidebar-title">Mensajeria</div>
+      <div class="sidebar-title" id="my-name">&middot;</div>
       <button class="icon-btn" id="btn-logout" title="Cerrar sesion">
         <svg viewBox="0 0 24 24" class="outline">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -430,19 +349,13 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <svg viewBox="0 0 24 24" class="outline">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6"/>
-          <path d="M14 11v6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
           <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
         </svg>
       </button>
     </header>
-
     <div id="messages"></div>
-
-    <div id="typing-wrap">
-      <div class="bub"><span></span><span></span><span></span></div>
-    </div>
-
+    <div id="typing-wrap"><div class="bub"><span></span><span></span><span></span></div></div>
     <div class="reply-bar" id="reply-bar">
       <div class="strip"></div>
       <div class="info">
@@ -453,7 +366,6 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-
     <footer class="chat-input">
       <button class="icon-btn" id="btn-emoji" title="Emojis">
         <svg viewBox="0 0 24 24" class="outline">
@@ -471,15 +383,15 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
     </footer>
-
     <div class="emoji-picker hidden" id="emoji-picker"></div>
   </main>
 </section>
 
-
+<!-- ══ Modal ajustes ══ -->
 <div class="modal hidden" id="settings-modal">
   <div class="modal-card">
     <h2>Ajustes</h2>
+
     <div class="setting-row">
       <div class="setting-label">
         <div>Inicio rapido con huella</div>
@@ -488,11 +400,11 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
       <label class="switch"><input type="checkbox" id="sw-fingerprint"><span></span></label>
     </div>
     <div class="setting-actions" id="fp-actions" style="display:none">
-      <button class="setting-btn" id="fp-register-chat">
+      <button type="button" class="setting-btn" id="fp-register-chat">
         <span>Registrar huella para el chat</span>
         <span class="fp-status" id="fp-status-chat">No registrada</span>
       </button>
-      <button class="setting-btn" id="fp-register-ia">
+      <button type="button" class="setting-btn" id="fp-register-ia">
         <span>Registrar huella para IA</span>
         <span class="fp-status" id="fp-status-ia">No registrada</span>
       </button>
@@ -500,6 +412,31 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <button type="button" class="danger-link" id="fp-delete">Borrar huella registrada</button>
       </div>
     </div>
+
+    <div class="setting-row" style="margin-top:18px;border-top:1px solid var(--border);padding-top:18px">
+      <div class="setting-label">
+        <div>Token de acceso</div>
+        <div class="setting-sub">Genera un token para acceder desde otro dispositivo</div>
+      </div>
+    </div>
+    <div id="token-area"></div>
+    <div class="setting-actions">
+      <button type="button" class="setting-btn" id="tok-gen-chat">
+        <span>Generar token para el chat</span>
+      </button>
+      <button type="button" class="setting-btn" id="tok-gen-ia">
+        <span>Generar token para IA</span>
+      </button>
+    </div>
+
+    <div class="setting-row" style="margin-top:18px;border-top:1px solid var(--border);padding-top:18px">
+      <div class="setting-label">
+        <div>Notificaciones push</div>
+        <div class="setting-sub">Recibe avisos aunque cierres el navegador</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="sw-push"><span></span></label>
+    </div>
+
     <div class="modal-foot">
       <button class="link" id="btn-close-settings">Cerrar</button>
     </div>
@@ -524,7 +461,7 @@ async function getJSON(url) {
   if (!r.ok) throw new Error(r.statusText);
   return r.json();
 }
-function hex32() {
+function hex32(){
   const a = new Uint8Array(16); crypto.getRandomValues(a);
   return Array.from(a, b => b.toString(16).padStart(2,'0')).join('');
 }
@@ -542,49 +479,13 @@ function escapeHTML(s){
 }
 let _toastT;
 function toast(msg, ms){
-  ms = ms || 2200;
+  ms = ms || 2400;
   const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(_toastT); _toastT = setTimeout(()=>t.classList.add('hidden'), ms);
 }
 
 const SVG_CHECK_1 = '<svg viewBox="0 0 16 11"><path fill="currentColor" d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636L1.792 6.09a.46.46 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.164-.336l-.363-.308z"/></svg>';
 const SVG_CHECK_2 = '<svg viewBox="0 0 16 11"><path fill="currentColor" d="M15.01.368l-.816-.643a.504.504 0 0 0-.334-.129.522.522 0 0 0-.397.19L8.324 6.479 7.29 5.413a.5.5 0 0 0-.334-.14.51.51 0 0 0-.36.145l-.328.329a.462.462 0 0 0-.15.343c0 .137.05.254.15.354l1.74 1.74a.68.68 0 0 0 .5.194.66.66 0 0 0 .534-.266l5.835-7.393a.531.531 0 0 0 .127-.34.469.469 0 0 0-.176-.348zM11.06.67a.463.463 0 0 0-.335-.135.504.504 0 0 0-.382.188L4.96 6.19 3.42 5.294a.463.463 0 0 0-.336-.14.51.51 0 0 0-.36.146l-.328.329a.462.462 0 0 0-.15.343c0 .136.05.254.15.353l2.326 2.327a.67.67 0 0 0 .5.202.66.66 0 0 0 .534-.266l5.834-7.393a.532.532 0 0 0 .128-.34.469.469 0 0 0-.176-.348L11.06.67z"/></svg>';
-
-
-// ── Service Worker + Notificaciones ──
-let swReg = null;
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js').then(r => { swReg = r; }).catch(()=>{});
-}
-async function ensureNotifyPermission() {
-  if (!('Notification' in window)) return false;
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') return false;
-  const p = await Notification.requestPermission();
-  return p === 'granted';
-}
-async function notifyMessage() {
-  // Notificación generica: NUNCA muestra el contenido del mensaje.
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  if (document.visibilityState === 'visible' && document.hasFocus()) return;
-
-  const opts = {
-    body: 'Tienes un mensaje nuevo',
-    icon:  '/static/icon.svg',
-    badge: '/static/icon.svg',
-    tag:   'nuevo-mensaje',
-    renotify: true,
-    silent: false,
-    requireInteraction: false,
-  };
-  try {
-    if (swReg) {
-      await swReg.showNotification('Mensajeria', opts);
-    } else {
-      new Notification('Mensajeria', opts);
-    }
-  } catch (e) {}
-}
 
 const state = {
   me:null, peer:null, peerOnline:false,
@@ -593,6 +494,7 @@ const state = {
   msgs:new Map(), dom:new Map(),
   lastDayKey:null,
   replyTo:null,
+  swReg: null,
 };
 
 const seenObserver = new IntersectionObserver(entries => {
@@ -608,12 +510,30 @@ const seenObserver = new IntersectionObserver(entries => {
 }, { threshold:.55 });
 
 function showPanel(name){
-  ['panel-login','panel-pin','panel-app'].forEach(id => {
-    $(id).classList.toggle('hidden', id !== 'panel-' + name);
+  ['token','login','pin','app'].forEach(id => {
+    $('panel-' + id).classList.toggle('hidden', id !== name);
   });
 }
 
-/* LOGIN */
+/* ══ TOKEN ══ */
+$('form-token').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const f = ev.target, btn = f.querySelector('button[type=submit]');
+  $('err-token').textContent=''; btn.disabled = true;
+  try {
+    const r = await postForm('/api/token/login', { token: f.token.value.trim() });
+    if (r.kind === 'ia') { location.href = '/ia'; return; }
+    const me = await getJSON('/api/me');
+    await enterApp(me);
+    registerPushIfWanted();
+  } catch(e){ $('err-token').textContent = e.message; }
+  finally { btn.disabled = false; }
+});
+
+$('btn-to-login').addEventListener('click', () => showPanel('login'));
+$('btn-login-back').addEventListener('click', () => showPanel('token'));
+
+/* ══ LOGIN ══ */
 $('form-login').addEventListener('submit', async ev => {
   ev.preventDefault();
   const f = ev.target, btn = f.querySelector('button[type=submit]');
@@ -627,7 +547,7 @@ $('form-login').addEventListener('submit', async ev => {
   finally { btn.disabled = false; }
 });
 
-/* PIN */
+/* ══ PIN ══ */
 $('form-pin').addEventListener('submit', async ev => {
   ev.preventDefault();
   const f = ev.target, btn = f.querySelector('button[type=submit]');
@@ -636,15 +556,13 @@ $('form-pin').addEventListener('submit', async ev => {
     await postForm('/api/pin', { pin: f.pin.value.trim() });
     const me = await getJSON('/api/me');
     await enterApp(me);
-    // Pedir permiso de notificaciones tras el login exitoso
-    try { await ensureNotifyPermission(); } catch(e){}
-
+    registerPushIfWanted();
   } catch(e){ $('err-pin').textContent = e.message; f.pin.value=''; f.pin.focus(); }
   finally { btn.disabled = false; }
 });
 $('btn-pin-cancel').addEventListener('click', async () => {
   try { await postForm('/api/logout', {}); } catch(e){}
-  showPanel('login');
+  showPanel('token');
 });
 
 $('btn-logout').addEventListener('click', async () => {
@@ -652,10 +570,248 @@ $('btn-logout').addEventListener('click', async () => {
   location.reload();
 });
 
+/* ══ WebAuthn (huella) ══ */
+function b64urlToBuf(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while (s.length % 4) s += '=';
+  const raw = atob(s);
+  const buf = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+  return buf.buffer;
+}
+function bufToB64url(buf){
+  const bytes = new Uint8Array(buf);
+  let str = '';
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function webauthnRegister(kind){
+  const b = await fetch('/api/webauthn/register/begin', { method:'POST', credentials:'same-origin' });
+  if (!b.ok) { toast('Error: ' + b.status); return; }
+  const opts = await b.json();
+  opts.challenge = b64urlToBuf(opts.challenge);
+  opts.user.id   = b64urlToBuf(opts.user.id);
+  if (opts.excludeCredentials) opts.excludeCredentials = opts.excludeCredentials.map(c => ({...c, id: b64urlToBuf(c.id)}));
+  let cred;
+  try { cred = await navigator.credentials.create({ publicKey: opts }); }
+  catch(e){
+    console.error(e);
+    const n = e && e.name ? e.name : 'Error';
+    if (n === 'NotAllowedError') toast('Cancelado');
+    else if (n === 'SecurityError') toast('Dominio no valido');
+    else if (n === 'NotSupportedError') toast('No soportado');
+    else toast('Error: ' + n);
+    return;
+  }
+  const att = {
+    id: cred.id, rawId: bufToB64url(cred.rawId), type: cred.type,
+    response: {
+      clientDataJSON: bufToB64url(cred.response.clientDataJSON),
+      attestationObject: bufToB64url(cred.response.attestationObject),
+    },
+    clientExtensionResults: cred.getClientExtensionResults(),
+  };
+  const f = await fetch('/api/webauthn/register/finish', {
+    method:'POST', credentials:'same-origin',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({ credential: att, kind: kind }),
+  });
+  if (!f.ok) { toast('Error al guardar'); return; }
+  toast('Huella registrada');
+  await refreshFPStatus();
+}
+
+async function webauthnLogin(){
+  const b = await fetch('/api/webauthn/login/begin', { method:'POST', credentials:'same-origin' });
+  if (b.status === 404) { toast('No hay huellas registradas'); return; }
+  if (!b.ok) { toast('Error: ' + b.status); return; }
+  const opts = await b.json();
+  opts.challenge = b64urlToBuf(opts.challenge);
+  if (opts.allowCredentials) opts.allowCredentials = opts.allowCredentials.map(c => ({...c, id: b64urlToBuf(c.id)}));
+  let asrt;
+  try { asrt = await navigator.credentials.get({ publicKey: opts }); }
+  catch(e){
+    console.error(e);
+    const n = e && e.name ? e.name : 'Error';
+    if (n === 'NotAllowedError') toast('Cancelado');
+    else if (n === 'SecurityError') toast('Dominio no valido');
+    else toast('Error: ' + n);
+    return;
+  }
+  const payload = {
+    credential: {
+      id: asrt.id, rawId: bufToB64url(asrt.rawId), type: asrt.type,
+      response: {
+        clientDataJSON:    bufToB64url(asrt.response.clientDataJSON),
+        authenticatorData: bufToB64url(asrt.response.authenticatorData),
+        signature:         bufToB64url(asrt.response.signature),
+        userHandle: asrt.response.userHandle ? bufToB64url(asrt.response.userHandle) : null,
+      },
+      clientExtensionResults: asrt.getClientExtensionResults(),
+    },
+    rawId: bufToB64url(asrt.rawId),
+  };
+  const f = await fetch('/api/webauthn/login/finish', {
+    method:'POST', credentials:'same-origin',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (!f.ok) { toast('Fallo de autenticacion'); return; }
+  const data = await f.json();
+  if (data.kind === 'ia') { location.href = '/ia'; return; }
+  const me = await getJSON('/api/me');
+  await enterApp(me);
+}
+
+async function refreshFPStatus(){
+  try {
+    const r = await fetch('/api/webauthn/list', { credentials:'same-origin' });
+    if (!r.ok) return;
+    const data = await r.json();
+    const creds = data.credentials || [];
+    const chat = creds.find(c => c.kind === 'chat');
+    const ia   = creds.find(c => c.kind === 'ia');
+    const sc = $('fp-status-chat'); const si = $('fp-status-ia');
+    if (sc) { sc.textContent = chat ? 'Registrada' : 'No registrada'; sc.classList.toggle('ok', !!chat); }
+    if (si) { si.textContent = ia   ? 'Registrada' : 'No registrada'; si.classList.toggle('ok', !!ia); }
+  } catch(e){}
+}
+
+// Mostrar boton huella en pantalla token si hay credenciales
+(async () => {
+  try {
+    const r = await fetch('/api/webauthn/has', { credentials:'same-origin' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.has) { $('btn-fingerprint').style.display = 'flex'; }
+  } catch(e){}
+})();
+$('btn-fingerprint').addEventListener('click', webauthnLogin);
+
+/* ══ Push ══ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').then(r => { state.swReg = r; }).catch(()=>{});
+}
+
+async function subscribePush(){
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    toast('Push no soportado'); return false;
+  }
+  if (Notification.permission !== 'granted') {
+    const p = await Notification.requestPermission();
+    if (p !== 'granted') { toast('Permiso denegado'); return false; }
+  }
+  let reg = state.swReg;
+  if (!reg) { reg = await navigator.serviceWorker.ready; state.swReg = reg; }
+  const cfg = await getJSON('/api/push/vapid');
+  if (!cfg.public_key) { toast('Push no configurado'); return false; }
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: b64urlToBuf(cfg.public_key),
+    });
+  }
+  const r = await fetch('/api/push/subscribe', {
+    method:'POST', credentials:'same-origin',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub }),
+  });
+  return r.ok;
+}
+
+async function registerPushIfWanted(){
+  try {
+    const v = localStorage.getItem('push_enabled');
+    if (v === '1') await subscribePush();
+  } catch(e){}
+}
+
+$('sw-push').addEventListener('change', async e => {
+  try { localStorage.setItem('push_enabled', e.target.checked ? '1' : '0'); } catch(er){}
+  if (e.target.checked) {
+    const ok = await subscribePush();
+    if (!ok) { e.target.checked = false; }
+    else toast('Notificaciones push activadas');
+  }
+});
+// Restaurar estado del toggle al abrir ajustes
+async function restorePushToggle(){
+  try {
+    const v = localStorage.getItem('push_enabled');
+    if (v === '1') $('sw-push').checked = true;
+  } catch(e){}
+}
+
+/* ══ Tokens ══ */
+async function generateToken(kind){
+  try {
+    const r = await fetch('/api/token/generate', {
+      method:'POST', credentials:'same-origin',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({ kind: kind }),
+    });
+    if (!r.ok) { toast('Error: ' + r.status); return; }
+    const data = await r.json();
+    renderTokenBox(data.token, data.kind);
+  } catch(e){ toast('Error de red'); }
+}
+function renderTokenBox(token, kind){
+  const area = $('token-area');
+  area.innerHTML =
+    '<div class="token-kind">Token para: ' + (kind === 'ia' ? 'IA' : 'chat') + '</div>' +
+    '<div class="token-box" id="tok-text">' + escapeHTML(token) + '</div>' +
+    '<button class="token-copy" id="tok-copy">Copiar token</button>' +
+    '<button class="danger-link" id="tok-revoke" style="width:100%">Revocar token</button>';
+  $('tok-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(token).then(()=>toast('Token copiado')).catch(()=>toast('No se pudo copiar'));
+  });
+  $('tok-revoke').addEventListener('click', async () => {
+    if (!confirm('¿Revocar el token actual?')) return;
+    await fetch('/api/token/revoke', { method:'POST', credentials:'same-origin' });
+    $('token-area').innerHTML = '';
+    toast('Token revocado');
+  });
+}
+$('tok-gen-chat').addEventListener('click', () => generateToken('chat'));
+$('tok-gen-ia').addEventListener('click',   () => generateToken('ia'));
+
+/* ══ Ajustes modal ══ */
+$('btn-settings').addEventListener('click', () => {
+  $('settings-modal').classList.remove('hidden');
+  refreshFPStatus();
+  restorePushToggle();
+});
+$('btn-close-settings').addEventListener('click', () => {
+  $('settings-modal').classList.add('hidden');
+});
+$('sw-fingerprint').addEventListener('change', e => {
+  const a = $('fp-actions');
+  if (a) a.style.display = e.target.checked ? 'flex' : 'none';
+  try { localStorage.setItem('fp_enabled', e.target.checked ? '1' : '0'); } catch(er){}
+});
+(function(){
+  try {
+    const v = localStorage.getItem('fp_enabled');
+    if (v === '1') { $('sw-fingerprint').checked = true; $('fp-actions').style.display = 'flex'; }
+  } catch(e){}
+})();
+$('fp-register-chat').addEventListener('click', () => webauthnRegister('chat'));
+$('fp-register-ia').addEventListener('click',   () => webauthnRegister('ia'));
+$('fp-delete').addEventListener('click', async () => {
+  if (!confirm('¿Borrar la huella registrada?')) return;
+  const r = await fetch('/api/webauthn/delete-all', { method:'POST', credentials:'same-origin' });
+  if (r.ok) { toast('Huella borrada'); await refreshFPStatus(); }
+  else toast('Error al borrar');
+});
+
+/* ══ App chat ══ */
 async function enterApp(me){
   state.me = me.username;
   state.peer = me.peer;
   $('me-avatar').textContent = (state.me[0]||'?').toUpperCase();
+  $('my-name').textContent   = state.me;
   $('peer-avatar').textContent = (state.peer ? state.peer[0] : '?').toUpperCase();
   $('peer-name').textContent = state.peer || 'Sin interlocutor';
   $('peer-status').textContent = 'desconectado';
@@ -665,7 +821,6 @@ async function enterApp(me){
   setConnStatus('connected');
   connectWS();
 }
-
 function renderConversations(){
   if (!state.peer) return;
   const arr = [...state.msgs.values()].sort((a,b)=>a.created_at-b.created_at);
@@ -707,7 +862,6 @@ function setPeerOnline(on){
   }
   renderConversations();
 }
-
 function connectWS(){
   if (state.ws && (state.ws.readyState===0 || state.ws.readyState===1)) return;
   const proto = location.protocol==='https:'?'wss:':'ws:';
@@ -746,10 +900,6 @@ function handleEvent(d){
 }
 function onIncoming(d){
   const id = d.message_id;
-  // Notificar si es del peer y no estamos mirando
-  if (d.from && d.from !== state.me) {
-    notifyMessage();
-  }
   if (state.msgs.has(id)) {
     const m = state.msgs.get(id);
     if (d.status && d.status !== m.status) { m.status = d.status; renderMessage(m); }
@@ -791,7 +941,7 @@ function sendCurrent(){
   const text = inp.value.trim();
   if (!text) return;
   if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
-    toast('Sin conexion, esperando reconexion...'); return;
+    toast('Sin conexion'); return;
   }
   const mid = hex32();
   const now = Math.floor(Date.now()/1000);
@@ -809,7 +959,6 @@ function sendCurrent(){
   inp.value = '';
   inp.focus();
 }
-
 function addMessage(msg, scroll){
   if (state.msgs.has(msg.message_id)) return;
   state.msgs.set(msg.message_id, msg);
@@ -829,7 +978,6 @@ function addMessage(msg, scroll){
   }
   renderConversations();
 }
-
 function renderMessage(msg){
   let row = state.dom.get(msg.message_id);
   const isOwn = msg.from === state.me;
@@ -839,16 +987,13 @@ function renderMessage(msg){
     row.className = 'msg ' + (isOwn ? 'out' : 'in');
     row.dataset.id = msg.message_id;
 
-    // Flecha de swipe
     const arrow = document.createElement('div');
     arrow.className = 'swipe-arrow';
     arrow.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
     row.appendChild(arrow);
 
-    // Burbuja
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    // Contenido del bubble: [quote?] + body + meta
     const quoteSlot = document.createElement('div');
     quoteSlot.className = 'quote-slot';
     const body = document.createElement('div');
@@ -875,12 +1020,12 @@ function renderMessage(msg){
     setupContextMenu(row, msg);
   }
 
-  // Cita: acepta reply_to como string (id) o como objeto {id, from, text}
+  // Cita
   const quoteSlot = row.querySelector('.quote-slot');
   let r = msg.reply_to;
   if (typeof r === 'string') {
     const orig = state.msgs.get(r);
-    r = orig ? { id: r, from: orig.from, text: orig.text } : { id: r, from: '', text: '' };
+    r = orig ? { id: r, from: orig.from, text: orig.text } : { id: r, from:'', text:'' };
   }
   if (r && (r.text || r.from)) {
     let q = quoteSlot.querySelector('.quote');
@@ -899,10 +1044,7 @@ function renderMessage(msg){
     quoteSlot.innerHTML = '';
   }
 
-  // Cuerpo
   row.querySelector('.body').textContent = msg.text;
-
-  // Meta
   row.querySelector('.time').textContent = fmtTime(msg.created_at);
   if (isOwn) {
     const checks = row.querySelector('.checks');
@@ -910,17 +1052,14 @@ function renderMessage(msg){
     checks.innerHTML = msg.status === 'sent' ? SVG_CHECK_1 : SVG_CHECK_2;
   }
 }
-
 function scrollToMsg(id){
   const el = state.dom.get(id);
   if (!el) { toast('Mensaje no disponible'); return; }
   el.scrollIntoView({behavior:'smooth', block:'center'});
-  const bubble = el.querySelector('.bubble');
-  if (bubble) bubble.animate(
-    [{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],
-    {duration:900, easing:'ease-out'});
+  const b = el.querySelector('.bubble');
+  if (b) b.animate([{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],
+                   {duration:900, easing:'ease-out'});
 }
-
 function updateStatus(id, status){
   const m = state.msgs.get(id);
   if (!m || m.status === status) return;
@@ -955,83 +1094,65 @@ function showPeerTyping(on){
   }
 }
 
-/* ══ SWIPE PARA RESPONDER ══ */
-const SWIPE_THRESHOLD = 60;
-const SWIPE_MAX = 90;
-
+/* Swipe */
+const SWIPE_THRESHOLD = 60, SWIPE_MAX = 90;
 function setupSwipe(row, msg){
   const bubble = row.querySelector('.bubble');
   const arrow  = row.querySelector('.swipe-arrow');
-  let startX=0, startY=0, curX=0, dragging=false, horizontal=null, armed=false;
-
+  let sX=0, sY=0, cX=0, drag=false, horiz=null, arm=false;
   const onStart = (e) => {
     if (e.touches && e.touches.length > 1) return;
     const p = e.touches ? e.touches[0] : e;
-    startX = p.clientX; startY = p.clientY;
-    curX = 0; dragging = false; horizontal = null; armed = false;
+    sX = p.clientX; sY = p.clientY;
+    cX = 0; drag = false; horiz = null; arm = false;
     bubble.style.transition = 'none';
   };
   const onMove = (e) => {
-    if (startX === 0 && startY === 0) return;
+    if (sX === 0 && sY === 0) return;
     const p = e.touches ? e.touches[0] : e;
-    const dx = p.clientX - startX;
-    const dy = p.clientY - startY;
-    if (horizontal === null) {
+    const dx = p.clientX - sX, dy = p.clientY - sY;
+    if (horiz === null) {
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      horizontal = Math.abs(dx) > Math.abs(dy) * 1.4 && dx > 0;
-      if (!horizontal) { reset(); return; }
-      dragging = true;
+      horiz = Math.abs(dx) > Math.abs(dy) * 1.4 && dx > 0;
+      if (!horiz) { reset(); return; }
+      drag = true;
     }
-    if (!dragging) return;
-    curX = Math.max(0, Math.min(dx, SWIPE_MAX));
-    bubble.style.transform = 'translateX(' + curX + 'px)';
-    if (curX > 8) arrow.classList.add('show');
-    if (curX >= SWIPE_THRESHOLD) {
+    if (!drag) return;
+    cX = Math.max(0, Math.min(dx, SWIPE_MAX));
+    bubble.style.transform = 'translateX(' + cX + 'px)';
+    if (cX > 8) arrow.classList.add('show');
+    if (cX >= SWIPE_THRESHOLD) {
       arrow.classList.add('armed');
-      if (!armed) {
-        if (navigator.vibrate) try { navigator.vibrate(15); } catch(e){}
-        armed = true;
-      }
-    } else {
-      arrow.classList.remove('armed');
-      armed = false;
-    }
+      if (!arm) { if (navigator.vibrate) try { navigator.vibrate(15); } catch(e){}; arm = true; }
+    } else { arrow.classList.remove('armed'); arm = false; }
   };
   const onEnd = () => {
     bubble.style.transition = 'transform .18s cubic-bezier(.2,.9,.3,1.05)';
-    if (curX >= SWIPE_THRESHOLD) {
-      startReply(msg);
-    }
+    if (cX >= SWIPE_THRESHOLD) startReply(msg);
     bubble.style.transform = 'translateX(0)';
     arrow.classList.remove('show','armed');
-    startX=0; startY=0; dragging=false; horizontal=null; armed=false;
+    sX=0; sY=0; drag=false; horiz=null; arm=false;
   };
   const reset = () => {
     bubble.style.transform = 'translateX(0)';
     arrow.classList.remove('show','armed');
-    startX=0; startY=0; dragging=false; horizontal=null; armed=false;
+    sX=0; sY=0; drag=false; horiz=null; arm=false;
   };
-
   bubble.addEventListener('touchstart', onStart, {passive:true});
   bubble.addEventListener('touchmove',  onMove,  {passive:true});
   bubble.addEventListener('touchend',   onEnd);
-  bubble.addEventListener('touchcancel', reset);
-
+  bubble.addEventListener('touchcancel',reset);
   bubble.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     onStart(e);
     const onM = (ev) => onMove(ev);
-    const onU = () => {
-      onEnd();
-      document.removeEventListener('mousemove', onM);
-      document.removeEventListener('mouseup', onU);
-    };
+    const onU = () => { onEnd(); document.removeEventListener('mousemove', onM); document.removeEventListener('mouseup', onU); };
     document.addEventListener('mousemove', onM);
     document.addEventListener('mouseup', onU);
   });
 }
 
-/* ══ MENÚ CONTEXTUAL (long press / clic derecho) ══ */
+/* Context menu */
 let ctxEl = null;
 function closeCtx(){ if (ctxEl) { ctxEl.remove(); ctxEl = null; } }
 function openCtx(msg, x, y){
@@ -1045,13 +1166,7 @@ function openCtx(msg, x, y){
     const b = ev.target.closest('button');
     if (!b) return;
     if (b.dataset.a === 'reply') startReply(msg);
-    if (b.dataset.a === 'copy') {
-      navigator.clipboard.writeText(msg.text).then(() => {
-        toast('Mensaje copiado');
-      }).catch(() => {
-        toast('No se pudo copiar');
-      });
-    }
+    if (b.dataset.a === 'copy')  navigator.clipboard.writeText(msg.text).then(()=>toast('Mensaje copiado')).catch(()=>toast('No se pudo copiar'));
     closeCtx();
   });
   document.body.appendChild(m);
@@ -1062,27 +1177,22 @@ function openCtx(msg, x, y){
 }
 document.addEventListener('click', e => { if (ctxEl && !ctxEl.contains(e.target)) closeCtx(); });
 document.addEventListener('scroll', closeCtx, true);
-
 function setupContextMenu(row, msg){
   const bubble = row.querySelector('.bubble');
-  let lpTimer = null;
-  bubble.addEventListener('contextmenu', e => {
-    e.preventDefault();
-    openCtx(msg, e.clientX, e.clientY);
-  });
+  let lp = null;
+  bubble.addEventListener('contextmenu', e => { e.preventDefault(); openCtx(msg, e.clientX, e.clientY); });
   bubble.addEventListener('touchstart', (e) => {
     const p = e.touches[0];
-    lpTimer = setTimeout(() => {
+    lp = setTimeout(() => {
       if (navigator.vibrate) try { navigator.vibrate(20); } catch(er){}
       openCtx(msg, p.clientX, p.clientY);
     }, 600);
   }, {passive:true});
-  const cancel = () => clearTimeout(lpTimer);
-  bubble.addEventListener('touchend', cancel);
-  bubble.addEventListener('touchmove', cancel);
-  bubble.addEventListener('touchcancel', cancel);
+  const c = () => clearTimeout(lp);
+  bubble.addEventListener('touchend', c);
+  bubble.addEventListener('touchmove', c);
+  bubble.addEventListener('touchcancel', c);
 }
-
 function startReply(msg){
   state.replyTo = { id: msg.message_id, from: msg.from, text: msg.text };
   const who = msg.from === state.me ? 'Tú' : (state.peer || msg.from || '');
@@ -1096,14 +1206,12 @@ function clearReply(){
   $('reply-bar').classList.remove('show');
 }
 $('rb-close').addEventListener('click', clearReply);
-
-/* ══ BORRAR TODO ══ */
 $('btn-clear-all').addEventListener('click', () => {
-  if (!confirm('¿Borrar TODOS los mensajes para ambos? No se puede deshacer.')) return;
+  if (!confirm('¿Borrar TODOS los mensajes para ambos?')) return;
   sendWS({ type: 'clear_all' });
 });
 
-/* ══ EMOJIS ══ */
+/* Emojis */
 const EMOJIS = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤝','🙏','💪','👏','🙌','👐','🤲','✍️','💅','🤳','👀','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','💕','💞','💓','💗','💖','💘','💝','💋','🔥','✨','⭐','🌟','💫','⚡','💥','🎉','🎊','🎁','🎂','☕','🍕','🍔','🍟','🍣','🍜','🍩','⚽','🏀','🏈','🎾','🏐','✅','❌','⚠️','❓','❗','💯','🔔','💬','📢','📅','⏰','🎵','🚀','🌙','🌈','❄️'];
 $('btn-emoji').addEventListener('click', e => {
   e.stopPropagation();
@@ -1113,7 +1221,7 @@ $('btn-emoji').addEventListener('click', e => {
     for (const em of EMOJIS) {
       const b = document.createElement('button');
       b.type = 'button'; b.textContent = em;
-      b.addEventListener('click', () => { const inp = $('input-msg'); inp.value += em; inp.focus(); });
+      b.addEventListener('click', () => { const i = $('input-msg'); i.value += em; i.focus(); });
       frag.appendChild(b);
     }
     p.appendChild(frag);
@@ -1138,7 +1246,6 @@ document.addEventListener('visibilitychange', () => {
   });
 });
 
-/* Auto-lock inactividad */
 let idleT;
 function resetIdle(){
   clearTimeout(idleT);
@@ -1151,237 +1258,15 @@ function resetIdle(){
   document.addEventListener(ev, resetIdle, {passive:true}));
 resetIdle();
 
+/* Bootstrap: ¿ya hay sesion? */
 (async () => {
   try {
     const me = await getJSON('/api/me');
     if (me.authenticated && me.level >= 2) await enterApp(me);
     else if (me.authenticated && me.level === 1) showPanel('pin');
-    else showPanel('login');
-  } catch(e){ showPanel('login'); }
+    else showPanel('token');
+  } catch(e){ showPanel('token'); }
 })();
-
-/* ══ WebAuthn: funciones auxiliares ══ */
-function b64urlToBuf(s) {
-  s = s.replace(/-/g,'+').replace(/_/g,'/');
-  while (s.length % 4) s += '=';
-  const raw = atob(s);
-  const buf = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
-  return buf.buffer;
-}
-function bufToB64url(buf) {
-  const bytes = new Uint8Array(buf);
-  let str = '';
-  for (const b of bytes) str += String.fromCharCode(b);
-  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-}
-
-async function webauthnRegister(kind) {
-  const begin = await fetch('/api/webauthn/register/begin', { method:'POST', credentials:'same-origin' });
-  if (!begin.ok) { toast('Error: ' + begin.status); return; }
-  const options = await begin.json();
-  options.challenge = b64urlToBuf(options.challenge);
-  options.user.id    = b64urlToBuf(options.user.id);
-  if (options.excludeCredentials) {
-    options.excludeCredentials = options.excludeCredentials.map(c => ({
-      ...c, id: b64urlToBuf(c.id)
-    }));
-  }
-  let credential;
-  try {
-    credential = await navigator.credentials.create({ publicKey: options });
-  } catch (e) {
-    console.error('webauthn register error', e);
-    const name = e && e.name ? e.name : 'Error';
-    const msg  = e && e.message ? e.message : '';
-    if (name === 'NotAllowedError') {
-      toast('Cancelado o tiempo agotado');
-    } else if (name === 'SecurityError') {
-      toast('Dominio no valido (revisa WEBAUTHN_ORIGIN)');
-    } else if (name === 'NotSupportedError') {
-      toast('Este dispositivo no soporta huella');
-    } else {
-      toast('Error: ' + name + (msg ? ' - ' + msg.slice(0,40) : ''));
-    }
-    return;
-  }
-  const attestation = {
-    id: credential.id,
-    rawId: bufToB64url(credential.rawId),
-    type: credential.type,
-    response: {
-      clientDataJSON: bufToB64url(credential.response.clientDataJSON),
-      attestationObject: bufToB64url(credential.response.attestationObject),
-    },
-    clientExtensionResults: credential.getClientExtensionResults(),
-  };
-  const finish = await fetch('/api/webauthn/register/finish', {
-    method:'POST', credentials:'same-origin',
-    headers: {'content-type':'application/json'},
-    body: JSON.stringify({ credential: attestation, kind: kind }),
-  });
-  if (!finish.ok) { toast('Error al guardar: ' + finish.status); return; }
-  toast('Huella registrada');
-  await refreshFingerprintStatus();
-}
-
-async function webauthnLogin() {
-  const begin = await fetch('/api/webauthn/login/begin', { method:'POST', credentials:'same-origin' });
-  if (begin.status === 404) { toast('No hay huellas registradas'); return; }
-  if (!begin.ok) { toast('Error: ' + begin.status); return; }
-  const options = await begin.json();
-  options.challenge = b64urlToBuf(options.challenge);
-  if (options.allowCredentials) {
-    options.allowCredentials = options.allowCredentials.map(c => ({
-      ...c, id: b64urlToBuf(c.id)
-    }));
-  }
-  let assertion;
-  try {
-    assertion = await navigator.credentials.get({ publicKey: options });
-  } catch (e) {
-    console.error('webauthn login error', e);
-    const name = e && e.name ? e.name : 'Error';
-    if (name === 'NotAllowedError') toast('Cancelado');
-    else if (name === 'SecurityError') toast('Dominio no valido');
-    else toast('Error: ' + name);
-    return;
-  }
-  const payload = {
-    credential: {
-      id: assertion.id,
-      rawId: bufToB64url(assertion.rawId),
-      type: assertion.type,
-      response: {
-        clientDataJSON:    bufToB64url(assertion.response.clientDataJSON),
-        authenticatorData: bufToB64url(assertion.response.authenticatorData),
-        signature:         bufToB64url(assertion.response.signature),
-        userHandle: assertion.response.userHandle
-          ? bufToB64url(assertion.response.userHandle) : null,
-      },
-      clientExtensionResults: assertion.getClientExtensionResults(),
-    },
-    rawId: bufToB64url(assertion.rawId),
-  };
-  const finish = await fetch('/api/webauthn/login/finish', {
-    method:'POST', credentials:'same-origin',
-    headers: {'content-type':'application/json'},
-    body: JSON.stringify(payload),
-  });
-  if (!finish.ok) { toast('Fallo de autenticacion'); return; }
-  const data = await finish.json();
-  if (data.kind === 'ia') {
-    location.href = '/ia';
-  } else {
-    const me = await getJSON('/api/me');
-    await enterApp(me);
-  }
-}
-
-async function refreshFingerprintStatus() {
-  try {
-    const r = await fetch('/api/webauthn/list', { credentials:'same-origin' });
-    if (!r.ok) return;
-    const data = await r.json();
-    const creds = data.credentials || [];
-    const chat = creds.find(c => c.kind === 'chat');
-    const ia   = creds.find(c => c.kind === 'ia');
-    const sc = document.getElementById('fp-status-chat');
-    const si = document.getElementById('fp-status-ia');
-    if (sc) { sc.textContent = chat ? 'Registrada' : 'No registrada'; sc.classList.toggle('ok', !!chat); }
-    if (si) { si.textContent = ia   ? 'Registrada' : 'No registrada'; si.classList.toggle('ok', !!ia); }
-    // Mostrar boton de huella en login solo si hay alguna
-    const btnFP = document.getElementById('btn-fingerprint');
-    if (btnFP) {
-      if (creds.length) {
-        btnFP.classList.remove('hidden');
-        btnFP.style.display = 'flex';
-      } else {
-        btnFP.classList.add('hidden');
-        btnFP.style.display = 'none';
-      }
-    }
-    // Actualizar estados individuales
-    const sc2 = document.getElementById('fp-status-chat');
-    const si2 = document.getElementById('fp-status-ia');
-    if (sc2) { sc2.textContent = chat ? 'Registrada' : 'No registrada'; sc2.classList.toggle('ok', !!chat); }
-    if (si2) { si2.textContent = ia   ? 'Registrada' : 'No registrada'; si2.classList.toggle('ok', !!ia); }
-  } catch(e) {}
-}
-
-// Mostrar boton de inicio rapido en login solo si hay huella registrada
-(async () => {
-  try {
-    const r = await fetch('/api/webauthn/has', { credentials:'same-origin' });
-    if (!r.ok) return;
-    const data = await r.json();
-    const btnFP = document.getElementById('btn-fingerprint');
-    if (btnFP && data.has) {
-      btnFP.classList.remove('hidden');
-      btnFP.style.display = 'flex';
-    }
-  } catch(e) {}
-})();
-
-// Boton huella en login
-document.addEventListener('click', (e) => {
-  if (e.target.closest('#btn-fingerprint')) webauthnLogin();
-});
-
-// Ajustes: abrir/cerrar
-document.addEventListener('click', (e) => {
-  if (e.target.closest('#btn-settings')) {
-    const m = document.getElementById('settings-modal');
-    if (m) { m.classList.remove('hidden'); refreshFingerprintStatus(); }
-  }
-  if (e.target.closest('#btn-close-settings')) {
-    const m = document.getElementById('settings-modal');
-    if (m) m.classList.add('hidden');
-  }
-  if (e.target.closest('#fp-register-chat')) webauthnRegister('chat');
-  if (e.target.closest('#fp-register-ia'))   webauthnRegister('ia');
-});
-
-// Toggle de huella en ajustes
-document.addEventListener('change', (e) => {
-  if (e.target.id === 'sw-fingerprint') {
-    const actions = document.getElementById('fp-actions');
-    if (actions) actions.style.display = e.target.checked ? 'flex' : 'none';
-    try { localStorage.setItem('fp_enabled', e.target.checked ? '1' : '0'); } catch(er){}
-  }
-});
-// Restaurar estado del toggle
-(function(){
-  try {
-    const v = localStorage.getItem('fp_enabled');
-    if (v === '1') {
-      const sw = document.getElementById('sw-fingerprint');
-      const ac = document.getElementById('fp-actions');
-      if (sw) sw.checked = true;
-      if (ac) ac.style.display = 'flex';
-    }
-  } catch(e){}
-})();
-
-/* Borrar huella registrada (todas las del usuario) */
-document.addEventListener('click', async (e) => {
-  if (!e.target.closest('#fp-delete')) return;
-  if (!confirm('¿Borrar la huella registrada? Podras registrar otra despues.')) return;
-  try {
-    const r = await fetch('/api/webauthn/delete-all', {
-      method:'POST', credentials:'same-origin',
-    });
-    if (r.ok) {
-      toast('Huella borrada');
-      await refreshFingerprintStatus();
-    } else {
-      toast('Error al borrar');
-    }
-  } catch(er) { toast('Error de red'); }
-});
-
-/* Marcar que ya está enganchado */
-window._fpDeleteHooked = true;
 </script>
 </body>
 </html>
