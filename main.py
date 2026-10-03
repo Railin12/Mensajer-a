@@ -1,7 +1,8 @@
 """
-Mensajeria — chat privado con Neon.
-- Mensajes NO LEIDOS en Neon (tabla messages_unread)
-- Al leer, se mueve a disco local y se borra de Neon, inicia TTL de 25min
+Mensajeria - chat privado 2 usuarios.
+- Mensajes persistidos en Neon (PostgreSQL). Sin TTL.
+- Usuarios desde env vars.
+- Boton 'clear_all' borra todo.
 """
 from __future__ import annotations
 
@@ -9,12 +10,11 @@ import asyncio
 import base64
 import hashlib
 import hmac
-import json
 import logging
 import os
+import re
 import secrets
 import time
-import re
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -27,102 +27,21 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
-load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
-MESSAGE_TTL = 1500
-CLEANUP_INTERVAL = 5
-SESSION_TTL = 60 * 60 * 8
+SESSION_TTL  = 60 * 60 * 8
 MAX_TEXT_LEN = 4000
-MAX_USERS = int(os.getenv("MAX_USERS", "2"))
-MAX_LOGIN_TRIES = 5
-LOGIN_WINDOW = 300
-USE_HTTPS = os.getenv("USE_HTTPS", "0") == "1"
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-DATA_ROOT = Path("data")
-DATA_DIR = DATA_ROOT / "messages"
-TMP_DIR = DATA_ROOT / "tmp"
-USERS_FILE = DATA_ROOT / "users.json"
-
-for d in (DATA_ROOT, DATA_DIR, TMP_DIR):
-    d.mkdir(parents=True, exist_ok=True)
+USE_HTTPS    = os.getenv("USE_HTTPS", "0") == "1"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mensajeria")
 
-# pool global para Neon
-pool: Optional[asyncpg.Pool] = None
-
-# ---------------------------------------------------------------------------
-# DB Neon
-# ---------------------------------------------------------------------------
-async def init_db():
-    """Conecta a Neon con reintentos y backoff. Fuerza loop asyncio fuera de uvloop."""
-    raw = os.getenv("DATABASE_URL", "")
-    if not raw:
-        raise RuntimeError("Falta DATABASE_URL")
-    clean_url = raw.replace("&channel_binding=require", "").replace("channel_binding=require", "")
-
-    last_err = None
-    for attempt in range(1, 6):
-        try:
-            pool = await asyncpg.create_pool(
-                clean_url,
-                min_size=1,
-                max_size=3,
-                timeout=60,
-                command_timeout=60,
-                statement_cache_size=0,
-            )
-            async with pool.acquire() as con:
-                await con.execute("""
-                    CREATE TABLE IF NOT EXISTS messages_unread (
-                        id TEXT PRIMARY KEY,
-                        sender TEXT NOT NULL,
-                        receiver TEXT NOT NULL,
-                        text TEXT NOT NULL,
-                        created_at BIGINT NOT NULL,
-                        status TEXT NOT NULL DEFAULT 'sent',
-                        reply_to TEXT
-                    );
-                """)
-                await con.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_receiver ON messages_unread(receiver);
-                """)
-                await con.execute("""
-                    ALTER TABLE messages_unread ADD COLUMN IF NOT EXISTS reply_to TEXT;
-                """)
-            log.info("Neon conectado y tabla messages_unread lista")
-            return pool
-        except Exception as e:
-            last_err = e
-            log.warning(f"init_db intento {attempt}/5 falló: {type(e).__name__}: {e}")
-            await asyncio.sleep(2 * attempt)
-    raise RuntimeError(f"No se pudo conectar a Neon tras 5 intentos: {last_err}")
-
-
-async def write_message_db(mid, meta, text):
-    await pool.execute("""
-        INSERT INTO messages_unread (id, sender, receiver, text, created_at, status)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (id) DO NOTHING
-    """, mid, meta["sender"], meta["receiver"], text, meta["created_at"], meta["status"])
-
-# ---------------------------------------------------------------------------
-# Password hashing con scrypt
-# ---------------------------------------------------------------------------
-SCRYPT_N = 2 ** 14
-SCRYPT_R = 8
-SCRYPT_P = 1
-SCRYPT_DKLEN = 32
+# ─── Password hashing ─────────────────────────────────────────────────
+SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_DKLEN = 2**14, 8, 1, 32
 
 def hash_password(password: str) -> str:
     salt = os.urandom(16)
-    key = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P, dklen=SCRYPT_DKLEN)
+    key = hashlib.scrypt(password.encode(), salt=salt,
+                         n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P, dklen=SCRYPT_DKLEN)
     return base64.b64encode(salt).decode() + "$" + base64.b64encode(key).decode()
 
 def verify_password(password: str, stored: str) -> bool:
@@ -130,43 +49,21 @@ def verify_password(password: str, stored: str) -> bool:
         salt_b64, key_b64 = stored.split("$", 1)
         salt = base64.b64decode(salt_b64)
         expected = base64.b64decode(key_b64)
-        key = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P, dklen=SCRYPT_DKLEN)
+        key = hashlib.scrypt(password.encode(), salt=salt,
+                             n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P, dklen=SCRYPT_DKLEN)
         return hmac.compare_digest(key, expected)
     except Exception:
         return False
 
-# ---------------------------------------------------------------------------
-# Usuarios
-# ---------------------------------------------------------------------------
-ENV_USERS = {
-    os.getenv("USER_A_NAME", "").strip(): {"password": os.getenv("USER_A_PASSWORD", ""), "pin": os.getenv("USER_A_PIN", "")},
-    os.getenv("USER_B_NAME", "").strip(): {"password": os.getenv("USER_B_PASSWORD", ""), "pin": os.getenv("USER_B_PIN", "")},
-}
-
-def _atomic_write(path: Path, data) -> None:
-    tmp = TMP_DIR / f"{path.name}.{uuid.uuid4().hex}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
-    os.replace(tmp, path)
-
+# ─── Usuarios desde env vars ──────────────────────────────────────────
 def load_users() -> Dict[str, dict]:
-    users: Dict[str, dict] = {}
-    if USERS_FILE.exists():
-        try:
-            with open(USERS_FILE, "r", encoding="utf-8") as f:
-                users = json.load(f)
-        except Exception as e:
-            log.error(f"users.json corrupto: {e}")
-            users = {}
-    changed = False
-    for u, d in ENV_USERS.items():
-        if not u or not d.get("password"):
-            continue
-        if u not in users:
-            users[u] = {"hash": hash_password(d["password"]), "pin": d.get("pin") or "0000"}
-            changed = True
-    if changed or not USERS_FILE.exists():
-        _atomic_write(USERS_FILE, users)
+    users = {}
+    for letter in ("A", "B"):
+        name = os.getenv(f"USER_{letter}_NAME", "").strip()
+        pw   = os.getenv(f"USER_{letter}_PASSWORD", "")
+        pin  = os.getenv(f"USER_{letter}_PIN", "")
+        if name and pw:
+            users[name] = {"hash": hash_password(pw), "pin": pin}
     return users
 
 USERS: Dict[str, dict] = load_users()
@@ -174,53 +71,17 @@ log.info(f"usuarios cargados: {list(USERS.keys())}")
 
 def get_peer(username: str) -> Optional[str]:
     for u in USERS.keys():
-        if u!= username:
+        if u != username:
             return u
     return None
 
-# ---------------------------------------------------------------------------
-# Estado en RAM
-# ---------------------------------------------------------------------------
-SESSIONS: Dict[str, dict] = {}
-LOGIN_ATTEMPTS: Dict[str, list] = {}
-MESSAGES: Dict[str, dict] = {}
+# ─── Estado RAM ───────────────────────────────────────────────────────
+SESSIONS:    Dict[str, dict]        = {}
 CONNECTIONS: Dict[str, Set[WebSocket]] = {}
+pool: Optional[asyncpg.Pool]        = None
 
 def is_online(user: str) -> bool:
     return bool(CONNECTIONS.get(user))
-
-# ---------------------------------------------------------------------------
-# Persistencia local (solo para mensajes LEIDOS)
-# ---------------------------------------------------------------------------
-def write_message(mid: str, meta: dict, text: str) -> str:
-    path = DATA_DIR / f"{mid}.json"
-    _atomic_write(path, {"meta": meta, "text": text})
-    return str(path)
-
-def persist_meta(mid: str) -> None:
-    meta = MESSAGES.get(mid)
-    if not meta:
-        return
-    path = Path(meta["file_path"])
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        return
-    data["meta"]["status"] = meta["status"]
-    data["meta"]["expires_at"] = meta["expires_at"]
-    _atomic_write(path, data)
-
-def read_text(mid: str) -> Optional[str]:
-    meta = MESSAGES.get(mid)
-    if not meta:
-        return None
-    try:
-        with open(meta["file_path"], "r", encoding="utf-8") as f:
-            return json.load(f).get("text")
-    except Exception as e:
-        log.error(f"read_text({mid}): {e}")
-        return None
 
 async def send_to(user: str, payload: dict) -> None:
     conns = CONNECTIONS.get(user)
@@ -235,71 +96,65 @@ async def send_to(user: str, payload: dict) -> None:
     for ws in dead:
         conns.discard(ws)
 
-async def delete_message(mid: str) -> None:
-    meta = MESSAGES.pop(mid, None)
-    if not meta:
-        return
-    try:
-        Path(meta["file_path"]).unlink(missing_ok=True)
-    except Exception as e:
-        log.error(f"unlink({mid}): {e}")
-    payload = {"type": "message_deleted", "message_id": mid}
-    await send_to(meta["sender"], payload)
-    await send_to(meta["receiver"], payload)
-    log.info(f"expired {mid}")
-
-# ---------------------------------------------------------------------------
-# Arranque y limpieza
-# ---------------------------------------------------------------------------
-async def recover_from_disk() -> None:
-    now = time.time()
-    kept = dropped = 0
-    for f in DATA_DIR.glob("*.json"):
+# ─── Neon ─────────────────────────────────────────────────────────────
+async def init_db():
+    raw = os.getenv("DATABASE_URL", "")
+    if not raw:
+        raise RuntimeError("Falta DATABASE_URL")
+    clean = raw.replace("&channel_binding=require", "").replace("channel_binding=require", "")
+    for attempt in range(1, 6):
         try:
-            with open(f, "r", encoding="utf-8") as fp:
-                data = json.load(fp)
+            p = await asyncpg.create_pool(
+                clean, min_size=1, max_size=3,
+                timeout=60, command_timeout=60,
+                statement_cache_size=0,
+            )
+            async with p.acquire() as con:
+                await con.execute("""
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id TEXT PRIMARY KEY,
+                        sender TEXT NOT NULL,
+                        receiver TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        created_at BIGINT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'sent',
+                        reply_to TEXT
+                    );
+                """)
+                await con.execute("CREATE INDEX IF NOT EXISTS idx_msg_sender   ON messages(sender)")
+                await con.execute("CREATE INDEX IF NOT EXISTS idx_msg_receiver ON messages(receiver)")
+                # Migrar tabla vieja si existe
+                await con.execute("""
+                    DO $$
+                    BEGIN
+                        IF EXISTS (SELECT FROM information_schema.tables
+                                   WHERE table_schema='public' AND table_name='messages_unread') THEN
+                            INSERT INTO messages (id, sender, receiver, text, created_at, status, reply_to)
+                            SELECT id, sender, receiver, text, created_at, status, reply_to
+                            FROM messages_unread
+                            ON CONFLICT (id) DO NOTHING;
+                            DROP TABLE messages_unread;
+                        END IF;
+                    END $$;
+                """)
+            log.info("Neon conectado, tabla 'messages' lista")
+            return p
         except Exception as e:
-            log.warning(f"corrupto {f.name}: {e}; borrando")
-            f.unlink(missing_ok=True)
-            continue
-        meta = data.get("meta") or {}
-        mid = meta.get("id")
-        if not mid:
-            f.unlink(missing_ok=True)
-            continue
-        if meta.get("status") == "read" and meta.get("expires_at") and now >= meta["expires_at"]:
-            f.unlink(missing_ok=True)
-            dropped += 1
-            continue
-        MESSAGES[mid] = {
-            "id": mid, "sender": meta.get("sender"), "receiver": meta.get("receiver"),
-            "status": meta.get("status", "sent"), "created_at": meta.get("created_at", int(now)),
-            "expires_at": meta.get("expires_at"), "file_path": str(f),
-        }
-        kept += 1
-    log.info(f"recover: kept={kept} dropped={dropped}")
-
-async def cleanup_loop() -> None:
-    """Deshabilitado: los mensajes no expiran. Solo se borran con 'clear_all'."""
-    while True:
-        await asyncio.sleep(3600)
-
+            log.warning(f"init_db intento {attempt}/5 falló: {type(e).__name__}: {e}")
+            await asyncio.sleep(2 * attempt)
+    raise RuntimeError("No se pudo conectar a Neon tras 5 intentos")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    await recover_from_disk()
-    task = asyncio.create_task(cleanup_loop())
+    global pool
+    pool = await init_db()
     yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
     if pool:
         await pool.close()
 
 app = FastAPI(title="Mensajeria", lifespan=lifespan)
+if Path("static").exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.middleware("http")
 async def no_cache_html(request, call_next):
@@ -310,12 +165,7 @@ async def no_cache_html(request, call_next):
         response.headers["Expires"] = "0"
     return response
 
-if Path("static").exists():
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# ---------------------------------------------------------------------------
-# Rutas basicas
-# ---------------------------------------------------------------------------
+# ─── Rutas ────────────────────────────────────────────────────────────
 @app.get("/")
 async def index():
     return FileResponse("templates/index.html")
@@ -326,68 +176,42 @@ async def favicon():
 
 @app.get("/api/status")
 async def api_status():
-    return {"can_register": len(USERS) < MAX_USERS, "slots": max(0, MAX_USERS - len(USERS)), "max_users": MAX_USERS}
+    return {"ok": True, "users": list(USERS.keys()), "max_users": len(USERS)}
 
 @app.get("/api/me")
 async def api_me(request: Request):
     token = request.cookies.get("session")
-    sess = SESSIONS.get(token) if token else None
+    sess  = SESSIONS.get(token) if token else None
     if not sess:
         return {"authenticated": False}
     user = sess["username"]
     peer = get_peer(user)
-    return {"authenticated": True, "username": user, "level": sess["level"], "peer": peer, "peer_online": is_online(peer) if peer else False}
-
-# ---------------------------------------------------------------------------
-# Registro / Login / PIN / Logout
-# ---------------------------------------------------------------------------
-def _check_rate(ip: str) -> None:
-    now = time.time()
-    attempts = LOGIN_ATTEMPTS.setdefault(ip, [])
-    attempts[:] = [t for t in attempts if now - t < LOGIN_WINDOW]
-    if len(attempts) >= MAX_LOGIN_TRIES:
-        raise HTTPException(429, "Demasiados intentos, espera unos minutos.")
-    attempts.append(now)
-
-@app.post("/api/register")
-async def api_register(request: Request, username: str = Form(...), password: str = Form(...), pin: str = Form(...)):
-    ip = request.client.host if request.client else "?"
-    _check_rate(ip)
-    if len(USERS) >= MAX_USERS:
-        raise HTTPException(403, "Capacidad maxima alcanzada")
-    username = username.strip()
-    if not username or len(username) > 32:
-        raise HTTPException(400, "Usuario invalido (1-32)")
-    if username in USERS:
-        raise HTTPException(409, "Ese usuario ya existe")
-    if len(password) < 6:
-        raise HTTPException(400, "Contrasena muy corta")
-    if not pin.isdigit() or not (4 <= len(pin) <= 8):
-        raise HTTPException(400, "PIN 4-8 digitos")
-    USERS[username] = {"hash": hash_password(password), "pin": pin}
-    _atomic_write(USERS_FILE, USERS)
-    log.info(f"nuevo usuario: {username}")
-    return {"ok": True, "username": username}
+    return {
+        "authenticated": True,
+        "username": user,
+        "level": sess["level"],
+        "peer": peer,
+        "peer_online": is_online(peer) if peer else False,
+    }
 
 @app.post("/api/login")
-async def api_login(request: Request, response: Response, username: str = Form(...), password: str = Form(...)):
-    ip = request.client.host if request.client else "?"
-    _check_rate(ip)
+async def api_login(request: Request, response: Response,
+                    username: str = Form(...), password: str = Form(...)):
     username = username.strip()
     stored = USERS.get(username)
-    ok = bool(stored) and verify_password(password, stored["hash"])
-    if not ok:
+    if not (stored and verify_password(password, stored["hash"])):
         await asyncio.sleep(0.4)
         raise HTTPException(401, "Credenciales incorrectas")
     token = secrets.token_urlsafe(32)
     SESSIONS[token] = {"username": username, "level": 1, "created_at": time.time()}
-    response.set_cookie("session", token, max_age=SESSION_TTL, httponly=True, secure=USE_HTTPS, samesite="strict", path="/")
+    response.set_cookie("session", token, max_age=SESSION_TTL,
+                        httponly=True, secure=USE_HTTPS, samesite="strict", path="/")
     return {"ok": True, "step": "pin"}
 
 @app.post("/api/pin")
 async def api_pin(request: Request, pin: str = Form(...)):
     token = request.cookies.get("session")
-    sess = SESSIONS.get(token) if token else None
+    sess  = SESSIONS.get(token) if token else None
     if not sess:
         raise HTTPException(401, "Sesion invalida")
     expected = USERS.get(sess["username"], {}).get("pin", "")
@@ -405,13 +229,15 @@ async def api_logout(request: Request, response: Response):
     response.delete_cookie("session", path="/")
     return {"ok": True}
 
-# ---------------------------------------------------------------------------
-# WebSocket
-# ---------------------------------------------------------------------------
+@app.post("/api/register")
+async def api_register():
+    raise HTTPException(403, "Registro deshabilitado. Configura los usuarios por variables de entorno.")
+
+# ─── WebSocket ────────────────────────────────────────────────────────
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     token = ws.cookies.get("session")
-    sess = SESSIONS.get(token) if token else None
+    sess  = SESSIONS.get(token) if token else None
     if not sess or sess.get("level", 0) < 2:
         await ws.close(code=4401)
         return
@@ -420,40 +246,32 @@ async def ws_endpoint(ws: WebSocket):
     await ws.accept()
     CONNECTIONS.setdefault(user, set()).add(ws)
     log.info(f"{user} connected")
+
     if peer:
         await send_to(peer, {"type": "presence_online", "user": user})
-    await ws.send_json({"type": "presence", "peer_online": is_online(peer) if peer else False})
+    await ws.send_json({"type": "presence",
+                        "peer_online": is_online(peer) if peer else False})
 
-    now = time.time()
-    # 1. Mensajes leidos en disco (RAM)
-    for mid, meta in list(MESSAGES.items()):
-        if user not in (meta["sender"], meta["receiver"]):
-            continue
-        if meta["status"] == "read" and meta["expires_at"] and now >= meta["expires_at"]:
-            continue
-        text = read_text(mid)
-        if text is None:
-            continue
-        try:
-            await ws.send_json({"type": "message", "message_id": mid, "text": text, "created_at": meta["created_at"], "status": meta["status"], "from": meta["sender"], "expires_at": meta["expires_at"]})
-        except Exception:
-            break
-
-    # 2. Mensajes NO LEIDOS desde Neon (snapshot)
+    # Snapshot desde Neon: TODOS los mensajes donde participa este user
     try:
-        rows = await pool.fetch("SELECT * FROM messages_unread WHERE sender = $1 OR receiver = $1 ORDER BY created_at ASC", user)
+        rows = await pool.fetch(
+            "SELECT id, sender, receiver, text, created_at, status, reply_to "
+            "FROM messages WHERE sender = $1 OR receiver = $1 ORDER BY created_at ASC",
+            user,
+        )
+        log.info(f"snapshot {user}: {len(rows)} mensajes")
         for row in rows:
             await ws.send_json({
-                "type": "message",
+                "type":       "message",
                 "message_id": row["id"],
-                "text": row["text"],
+                "text":       row["text"],
                 "created_at": row["created_at"],
-                "status": row["status"],
-                "from": row["sender"],
-                "expires_at": None,
+                "status":     row["status"],
+                "from":       row["sender"],
+                "reply_to":   row["reply_to"],
             })
     except Exception as e:
-        log.error(f"snapshot Neon error: {e}")
+        log.error(f"snapshot error: {type(e).__name__}: {e}")
 
     try:
         while True:
@@ -462,7 +280,7 @@ async def ws_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        log.error(f"ws({user}): {e}")
+        log.error(f"ws({user}): {type(e).__name__}: {e}")
     finally:
         conns = CONNECTIONS.get(user)
         if conns:
@@ -472,55 +290,86 @@ async def ws_endpoint(ws: WebSocket):
             await send_to(peer, {"type": "presence_offline", "user": user})
 
 async def handle_ws(user: str, data: dict) -> None:
-    t = data.get("type")
+    t    = data.get("type")
     peer = get_peer(user)
 
+    # ── Borrar TODO ──
+    if t == "clear_all":
+        try:
+            await pool.execute(
+                "DELETE FROM messages WHERE sender = $1 OR receiver = $1",
+                user,
+            )
+        except Exception as e:
+            log.error(f"clear_all: {e}")
+        payload = {"type": "messages_cleared"}
+        await send_to(user, payload)
+        if peer:
+            await send_to(peer, payload)
+        log.info(f"clear_all por {user}")
+        return
+
+    # ── Enviar mensaje ──
     if t == "message":
         text = (data.get("text") or "").strip()
         if not text or len(text) > MAX_TEXT_LEN or not peer:
             return
-        reply_to = (data.get("reply_to") or "").strip() or None
+        reply_to   = (data.get("reply_to") or "").strip() or None
         client_mid = (data.get("message_id") or "").strip()
-        if client_mid and re.match(r"^[a-f0-9]{32}$", client_mid):
-            # verificar que no exista en Neon ni RAM
-            exists_disk = client_mid in MESSAGES
-            exists_db = await pool.fetchval("SELECT 1 FROM messages_unread WHERE id = $1", client_mid)
-            mid = client_mid if not exists_disk and not exists_db else uuid.uuid4().hex
-        else:
-            mid = uuid.uuid4().hex
+        mid = client_mid if re.match(r"^[a-f0-9]{32}$", client_mid or "") else uuid.uuid4().hex
         created_at = int(time.time())
-        meta = {"id": mid, "sender": user, "receiver": peer, "status": "sent", "created_at": created_at, "expires_at": None}
 
-        # Guardar en Neon
-        await write_message_db(mid, meta, text)
+        try:
+            await pool.execute(
+                "INSERT INTO messages (id, sender, receiver, text, created_at, status, reply_to) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING",
+                mid, user, peer, text, created_at, "sent", reply_to,
+            )
+        except Exception as e:
+            log.error(f"insert: {e}")
+            return
 
-        await send_to(user, {"type": "message", "message_id": mid, "text": text, "created_at": created_at, "status": "sent", "from": user, "expires_at": None})
+        # Eco al emisor
+        await send_to(user, {
+            "type": "message", "message_id": mid, "text": text,
+            "created_at": created_at, "status": "sent",
+            "from": user, "reply_to": reply_to,
+        })
 
+        # Al peer si está online
         if is_online(peer):
-            await send_to(peer, {"type": "message", "message_id": mid, "text": text, "created_at": created_at, "status": "delivered", "from": user, "expires_at": None})
-            # actualizar status a delivered en Neon
-            await pool.execute("UPDATE messages_unread SET status = 'delivered' WHERE id = $1", mid)
+            await send_to(peer, {
+                "type": "message", "message_id": mid, "text": text,
+                "created_at": created_at, "status": "delivered",
+                "from": user, "reply_to": reply_to,
+            })
+            try:
+                await pool.execute(
+                    "UPDATE messages SET status = 'delivered' "
+                    "WHERE id = $1 AND status = 'sent'",
+                    mid,
+                )
+            except Exception:
+                pass
             await send_to(user, {"type": "message_delivered", "message_id": mid})
         return
 
+    # ── Visto ──
     if t == "message_seen":
         mid = data.get("message_id")
         if not mid:
             return
-        # Solo cambia el estado a 'read' en Neon. NO se borra ni se expira.
         try:
             await pool.execute(
-                "UPDATE messages_unread SET status = 'read' WHERE id = $1 AND receiver = $2",
-                mid, user
+                "UPDATE messages SET status = 'read' "
+                "WHERE id = $1 AND receiver = $2 AND status != 'read'",
+                mid, user,
             )
         except Exception as e:
-            log.error(f"message_seen update: {e}")
+            log.error(f"message_seen: {e}")
             return
-        # Sacar del índice RAM (ya no es necesario, todo vive en Neon)
-        MESSAGES.pop(mid, None)
-        # Notificar a ambos
         row = await pool.fetchrow(
-            "SELECT sender, receiver FROM messages_unread WHERE id = $1", mid
+            "SELECT sender, receiver FROM messages WHERE id = $1", mid
         )
         if row:
             payload = {"type": "message_seen", "message_id": mid}
@@ -528,6 +377,7 @@ async def handle_ws(user: str, data: dict) -> None:
             await send_to(row["receiver"], payload)
         return
 
+    # ── Typing ──
     if t == "typing_start" and peer:
         await send_to(peer, {"type": "typing_start"})
         return
@@ -535,21 +385,15 @@ async def handle_ws(user: str, data: dict) -> None:
         await send_to(peer, {"type": "typing_stop"})
         return
 
-# ---------------------------------------------------------------------------
-# Entrypoint
-# ---------------------------------------------------------------------------
+# ─── Entrypoint ───────────────────────────────────────────────────────
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     cert = os.getenv("SSL_CERT")
     key  = os.getenv("SSL_KEY")
     kwargs = {
-        "host": host,
-        "port": port,
-        "log_level": "info",
-        "loop": "asyncio",        # ← fuerza el loop estándar, no uvloop
-        "http": "h11",            # ← fuerza http parser h11 (no httptools)
-        "ws": "wsproto",          # ← fuerza parser ws puro Python
+        "host": host, "port": port, "log_level": "info",
+        "loop": "asyncio", "http": "h11", "ws": "wsproto",
     }
     if cert and key and Path(cert).exists() and Path(key).exists():
         kwargs["ssl_certfile"] = cert
