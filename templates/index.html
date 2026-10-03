@@ -244,6 +244,9 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   #typing-wrap{margin-left:10px}
   .auth-card{padding:30px 22px}
 }
+
+.icon-btn.danger{color:#f15c6d}
+.icon-btn.danger:hover{background:rgba(241,92,109,.12);color:#ff7a8a}
 </style>
 </head>
 <body>
@@ -328,6 +331,15 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <div class="name" id="peer-name">&mdash;</div>
         <div class="peer-status" id="peer-status">desconectado</div>
       </div>
+      <button class="icon-btn danger" id="btn-clear-all" title="Borrar todos los mensajes" aria-label="Borrar todos los mensajes">
+        <svg viewBox="0 0 24 24" class="outline">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+          <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </button>
     </header>
 
     <div id="messages"></div>
@@ -1049,6 +1061,34 @@ resetIdle();
     else if (me.authenticated && me.level === 1) showPanel('pin');
     else showPanel('login');
   } catch (e) { showPanel('login'); }
+})();
+
+/* ═══ BORRAR TODOS LOS MENSAJES ═══ */
+function clearAllUI() {
+  state.msgs.clear();
+  state.dom.forEach(el => el.remove());
+  state.dom.clear();
+  document.querySelectorAll('#messages .time-sep').forEach(el => el.remove());
+  state.lastDayKey = null;
+  renderConversations();
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#btn-clear-all')) return;
+  if (!confirm('¿Borrar TODOS los mensajes para ambos? Esta acción no se puede deshacer.')) return;
+  sendWS({ type: 'clear_all' });
+});
+
+/* Enganchar messages_cleared en handleEvent */
+(function patchHandleEvent() {
+  if (window.__clearAllPatched) return;
+  window.__clearAllPatched = true;
+  const orig = window.handleEvent;
+  if (typeof orig === 'function') {
+    window.handleEvent = function(d) {
+      if (d && d.type === 'messages_cleared') { clearAllUI(); return; }
+      return orig(d);
+    };
+  }
 })();
 </script>
 </body>

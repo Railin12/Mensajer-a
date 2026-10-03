@@ -280,15 +280,10 @@ async def recover_from_disk() -> None:
     log.info(f"recover: kept={kept} dropped={dropped}")
 
 async def cleanup_loop() -> None:
+    """Deshabilitado: los mensajes no expiran. Solo se borran con 'clear_all'."""
     while True:
-        try:
-            now = time.time()
-            expired = [mid for mid, m in MESSAGES.items() if m["status"] == "read" and m["expires_at"] and now >= m["expires_at"]]
-            for mid in expired:
-                await delete_message(mid)
-        except Exception as e:
-            log.error(f"cleanup: {e}")
-        await asyncio.sleep(CLEANUP_INTERVAL)
+        await asyncio.sleep(3600)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -512,31 +507,25 @@ async def handle_ws(user: str, data: dict) -> None:
         mid = data.get("message_id")
         if not mid:
             return
-        # Buscar primero en Neon (no leido)
-        row = await pool.fetchrow("SELECT * FROM messages_unread WHERE id = $1", mid)
-        if row and row["receiver"] == user:
-            now = int(time.time())
-            expires_at = now + MESSAGE_TTL
-            meta = {"id": mid, "sender": row["sender"], "receiver": row["receiver"], "status": "read", "created_at": row["created_at"], "expires_at": expires_at}
-            path = write_message(mid, meta, row["text"])
-            MESSAGES[mid] = {**meta, "file_path": path}
-            await pool.execute("DELETE FROM messages_unread WHERE id = $1", mid)
-            payload = {"type": "message_seen", "message_id": mid, "expires_at": expires_at}
+        # Solo cambia el estado a 'read' en Neon. NO se borra ni se expira.
+        try:
+            await pool.execute(
+                "UPDATE messages_unread SET status = 'read' WHERE id = $1 AND receiver = $2",
+                mid, user
+            )
+        except Exception as e:
+            log.error(f"message_seen update: {e}")
+            return
+        # Sacar del índice RAM (ya no es necesario, todo vive en Neon)
+        MESSAGES.pop(mid, None)
+        # Notificar a ambos
+        row = await pool.fetchrow(
+            "SELECT sender, receiver FROM messages_unread WHERE id = $1", mid
+        )
+        if row:
+            payload = {"type": "message_seen", "message_id": mid}
             await send_to(row["sender"], payload)
             await send_to(row["receiver"], payload)
-            return
-
-        # Si ya esta en disco (caso borde)
-        meta = MESSAGES.get(mid) if mid else None
-        if not meta or meta["receiver"]!= user or meta["status"] == "read":
-            return
-        now = int(time.time())
-        meta["status"] = "read"
-        meta["expires_at"] = now + MESSAGE_TTL
-        persist_meta(mid)
-        payload = {"type": "message_seen", "message_id": mid, "expires_at": meta["expires_at"]}
-        await send_to(meta["sender"], payload)
-        await send_to(meta["receiver"], payload)
         return
 
     if t == "typing_start" and peer:
