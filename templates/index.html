@@ -1292,7 +1292,15 @@ async function refreshFingerprintStatus() {
     if (si) { si.textContent = ia   ? 'Registrada' : 'No registrada'; si.classList.toggle('ok', !!ia); }
     // Mostrar boton de huella en login solo si hay alguna
     const btnFP = document.getElementById('btn-fingerprint');
-    if (btnFP) btnFP.style.display = creds.length ? 'flex' : 'none';
+    if (btnFP) {
+      if (creds.length) {
+        btnFP.classList.remove('hidden');
+        btnFP.style.display = 'flex';
+      } else {
+        btnFP.classList.add('hidden');
+        btnFP.style.display = 'none';
+      }
+    }
     // Actualizar estados individuales
     const sc2 = document.getElementById('fp-status-chat');
     const si2 = document.getElementById('fp-status-ia');
@@ -1308,7 +1316,10 @@ async function refreshFingerprintStatus() {
     if (!r.ok) return;
     const data = await r.json();
     const btnFP = document.getElementById('btn-fingerprint');
-    if (btnFP && data.has) btnFP.style.display = 'flex';
+    if (btnFP && data.has) {
+      btnFP.classList.remove('hidden');
+      btnFP.style.display = 'flex';
+    }
   } catch(e) {}
 })();
 
