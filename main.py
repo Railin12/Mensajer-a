@@ -404,6 +404,25 @@ async def wac_list(request: Request):
     return {"credentials": [{"id": r["credential_id"], "kind": r["kind"],
                              "created_at": r["created_at"]} for r in rows]}
 
+@app.get("/api/webauthn/has")
+async def wac_has():
+    """Endpoint publico (sin sesion): dice si hay huella registrada y de que tipo."""
+    row = await pool.fetchrow(
+        "SELECT kind FROM webauthn_credentials ORDER BY created_at DESC LIMIT 1"
+    )
+    count = await pool.fetchval("SELECT COUNT(*) FROM webauthn_credentials")
+    if not row:
+        return {"has": False, "kind": None, "count": 0}
+    return {"has": True, "kind": row["kind"], "count": count or 0}
+
+@app.post("/api/webauthn/delete-all")
+async def wac_delete_all(request: Request):
+    user = _session_user(request)
+    if not user:
+        raise HTTPException(401, "Sesion invalida")
+    await pool.execute("DELETE FROM webauthn_credentials WHERE username = $1", user)
+    return {"ok": True}
+
 @app.post("/api/webauthn/delete")
 async def wac_delete(request: Request):
     user = _session_user(request)

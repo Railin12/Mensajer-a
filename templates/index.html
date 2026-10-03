@@ -335,6 +335,10 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
 .modal-foot{margin-top:18px;display:flex;justify-content:flex-end}
 .modal-foot .link{margin:0;width:auto;padding:8px 14px;background:var(--input);border-radius:8px}
 
+
+.danger-zone{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);text-align:center}
+.danger-link{color:#f15c6d;font-size:13px;padding:8px 12px;border-radius:8px;transition:background .15s}
+.danger-link:hover{background:rgba(241,92,109,.1);color:#ff7a8a}
 </style>
 </head>
 <body>
@@ -492,6 +496,9 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <span>Registrar huella para IA</span>
         <span class="fp-status" id="fp-status-ia">No registrada</span>
       </button>
+      <div class="danger-zone">
+        <button type="button" class="danger-link" id="fp-delete">Borrar huella registrada</button>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="link" id="btn-close-settings">Cerrar</button>
@@ -1286,15 +1293,22 @@ async function refreshFingerprintStatus() {
     // Mostrar boton de huella en login solo si hay alguna
     const btnFP = document.getElementById('btn-fingerprint');
     if (btnFP) btnFP.style.display = creds.length ? 'flex' : 'none';
+    // Actualizar estados individuales
+    const sc2 = document.getElementById('fp-status-chat');
+    const si2 = document.getElementById('fp-status-ia');
+    if (sc2) { sc2.textContent = chat ? 'Registrada' : 'No registrada'; sc2.classList.toggle('ok', !!chat); }
+    if (si2) { si2.textContent = ia   ? 'Registrada' : 'No registrada'; si2.classList.toggle('ok', !!ia); }
   } catch(e) {}
 }
 
-// Comprobar al arrancar si hay credenciales para mostrar el boton en login
+// Mostrar boton de inicio rapido en login solo si hay huella registrada
 (async () => {
   try {
-    const r = await fetch('/api/webauthn/login/begin', { method:'POST', credentials:'same-origin' });
+    const r = await fetch('/api/webauthn/has', { credentials:'same-origin' });
+    if (!r.ok) return;
+    const data = await r.json();
     const btnFP = document.getElementById('btn-fingerprint');
-    if (btnFP && r.ok) btnFP.style.display = 'flex';
+    if (btnFP && data.has) btnFP.style.display = 'flex';
   } catch(e) {}
 })();
 
@@ -1337,6 +1351,26 @@ document.addEventListener('change', (e) => {
     }
   } catch(e){}
 })();
+
+/* Borrar huella registrada (todas las del usuario) */
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('#fp-delete')) return;
+  if (!confirm('¿Borrar la huella registrada? Podras registrar otra despues.')) return;
+  try {
+    const r = await fetch('/api/webauthn/delete-all', {
+      method:'POST', credentials:'same-origin',
+    });
+    if (r.ok) {
+      toast('Huella borrada');
+      await refreshFingerprintStatus();
+    } else {
+      toast('Error al borrar');
+    }
+  } catch(er) { toast('Error de red'); }
+});
+
+/* Marcar que ya está enganchado */
+window._fpDeleteHooked = true;
 </script>
 </body>
 </html>
