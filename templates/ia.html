@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Proximamente</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(1200px 600px at 20% -10%,#0d3b34 0,transparent 55%),
+             radial-gradient(900px 500px at 110% 110%,#0a1f24 0,transparent 55%),#0b141a;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:#e9edef;padding:24px;overflow:hidden
+}
+.card{
+  max-width:520px;width:100%;background:#111b21;border:1px solid #222d34;
+  border-radius:18px;padding:44px 32px;text-align:center;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);
+  animation:in .5s cubic-bezier(.2,.9,.3,1.05)
+}
+@keyframes in{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.logo{
+  width:80px;height:80px;margin:0 auto 22px;border-radius:50%;
+  background:linear-gradient(135deg,#00a884,#005c4b);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(0,168,132,.3);
+  animation:pulse 2.5s ease-in-out infinite
+}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.logo svg{width:44px;height:44px;stroke:#062e26;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+h1{font-size:22px;font-weight:600;margin-bottom:12px;letter-spacing:-.2px}
+.sub{color:#8696a0;font-size:14px;line-height:1.6;margin-bottom:26px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:26px}
+.tag{background:#202c33;color:#8696a0;padding:6px 12px;border-radius:16px;
+  font-size:12px;font-weight:500}
+.footer{color:#5a6670;font-size:12px;margin-top:22px;line-height:1.5}
+.pill{display:inline-block;background:#202c33;color:#00a884;padding:4px 12px;
+  border-radius:12px;font-size:11.5px;font-weight:600;letter-spacing:.3px;
+  margin-bottom:22px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="pill">Acceso anticipado</div>
+  <div class="logo">
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>
+    </svg>
+  </div>
+  <h1>Nueva version en preparacion</h1>
+  <p class="sub">
+    Estamos construyendo un asistente conversacional integrado con tu mensajeria,
+    capaz de resumir, redactar y responder por ti. Estara disponible de forma
+    gradual en las proximas semanas.
+  </p>
+  <div class="tags">
+    <span class="tag">Procesamiento local</span>
+    <span class="tag">Sin historial</span>
+    <span class="tag">Cifrado en transito</span>
+    <span class="tag">Contexto limitado</span>
+  </div>
+  <div class="footer">
+    Este acceso se ha desbloqueado con tu huella.<br>
+    No compartas este enlace.
+  </div>
+</div>
+</body>
+</html>

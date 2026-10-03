@@ -22,6 +22,17 @@ from typing import Dict, Optional, Set
 
 import asyncpg
 import uvicorn
+from webauthn import (
+    generate_registration_options, verify_registration_response,
+    generate_authentication_options, verify_authentication_response,
+    options_to_json,
+)
+from webauthn.helpers.structs import (
+    AuthenticatorSelectionCriteria, UserVerificationRequirement,
+    PublicKeyCredentialDescriptor,
+)
+from webauthn.helpers import bytes_to_base64url, base64url_to_bytes
+
 from fastapi import (
     FastAPI, Form, HTTPException, Request, Response, WebSocket, WebSocketDisconnect,
 )
@@ -31,6 +42,9 @@ from fastapi.staticfiles import StaticFiles
 SESSION_TTL  = 60 * 60 * 8
 MAX_TEXT_LEN = 4000
 USE_HTTPS    = os.getenv("USE_HTTPS", "0") == "1"
+WEBAUTHN_RP_ID   = os.getenv("WEBAUTHN_RP_ID",   "localhost")
+WEBAUTHN_RP_NAME = os.getenv("WEBAUTHN_RP_NAME", "Mensajeria")
+WEBAUTHN_ORIGIN  = os.getenv("WEBAUTHN_ORIGIN",  "http://localhost:8000")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mensajeria")
@@ -123,6 +137,17 @@ async def init_db():
                 """)
                 await con.execute("CREATE INDEX IF NOT EXISTS idx_msg_sender   ON messages(sender)")
                 await con.execute("CREATE INDEX IF NOT EXISTS idx_msg_receiver ON messages(receiver)")
+                await con.execute("""
+                    CREATE TABLE IF NOT EXISTS webauthn_credentials (
+                        credential_id TEXT PRIMARY KEY,
+                        username      TEXT NOT NULL,
+                        public_key    TEXT NOT NULL,
+                        sign_count    BIGINT NOT NULL DEFAULT 0,
+                        kind          TEXT NOT NULL DEFAULT 'chat',
+                        created_at    BIGINT NOT NULL
+                    );
+                """)
+                await con.execute("CREATE INDEX IF NOT EXISTS idx_wac_user ON webauthn_credentials(username)")
                 # Migrar tabla vieja si existe
                 await con.execute("""
                     DO $$
@@ -169,6 +194,10 @@ async def no_cache_html(request, call_next):
 @app.get("/")
 async def index():
     return FileResponse("templates/index.html")
+
+@app.get("/ia")
+async def page_ia():
+    return FileResponse("templates/ia.html")
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -232,6 +261,150 @@ async def api_logout(request: Request, response: Response):
 @app.post("/api/register")
 async def api_register():
     raise HTTPException(403, "Registro deshabilitado. Configura los usuarios por variables de entorno.")
+
+
+# ─── WebAuthn ─────────────────────────────────────────────────────────
+CHALLENGES: Dict[str, bytes] = {}   # challenge temporal en RAM, se borra al usarlo
+
+def _session_user(request: Request) -> Optional[str]:
+    token = request.cookies.get("session")
+    sess  = SESSIONS.get(token) if token else None
+    return sess["username"] if sess else None
+
+@app.post("/api/webauthn/register/begin")
+async def wac_register_begin(request: Request):
+    user = _session_user(request)
+    if not user:
+        raise HTTPException(401, "Sesion invalida")
+    existing = await pool.fetch(
+        "SELECT credential_id FROM webauthn_credentials WHERE username = $1", user
+    )
+    exclude = [PublicKeyCredentialDescriptor(id=base64url_to_bytes(r["credential_id"]))
+               for r in existing]
+    options = generate_registration_options(
+        rp_id=WEBAUTHN_RP_ID,
+        rp_name=WEBAUTHN_RP_NAME,
+        user_id=user.encode("utf-8"),
+        user_name=user,
+        exclude_credentials=exclude,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            user_verification=UserVerificationRequirement.PREFERRED,
+        ),
+    )
+    CHALLENGES["reg:" + user] = options.challenge
+    return Response(content=options_to_json(options), media_type="application/json")
+
+@app.post("/api/webauthn/register/finish")
+async def wac_register_finish(request: Request):
+    user = _session_user(request)
+    if not user:
+        raise HTTPException(401, "Sesion invalida")
+    body = await request.json()
+    expected = CHALLENGES.pop("reg:" + user, None)
+    if not expected:
+        raise HTTPException(400, "Challenge no encontrado")
+    try:
+        verification = verify_registration_response(
+            credential=body["credential"],
+            expected_challenge=expected,
+            expected_origin=WEBAUTHN_ORIGIN,
+            expected_rp_id=WEBAUTHN_RP_ID,
+            require_user_verification=False,
+        )
+    except Exception as e:
+        raise HTTPException(400, f"Registro fallido: {e}")
+    cred_id = bytes_to_base64url(verification.credential_id)
+    pub_key = bytes_to_base64url(verification.credential_public_key)
+    kind = (body.get("kind") or "chat").lower()
+    if kind not in ("chat", "ia"):
+        kind = "chat"
+    await pool.execute(
+        "INSERT INTO webauthn_credentials (credential_id, username, public_key, sign_count, kind, created_at) "
+        "VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (credential_id) DO UPDATE SET kind = $5",
+        cred_id, user, pub_key, verification.sign_count, kind, int(time.time()),
+    )
+    return {"ok": True, "kind": kind}
+
+@app.post("/api/webauthn/login/begin")
+async def wac_login_begin():
+    rows = await pool.fetch(
+        "SELECT credential_id FROM webauthn_credentials"
+    )
+    if not rows:
+        raise HTTPException(404, "No hay credenciales registradas")
+    allow = [PublicKeyCredentialDescriptor(id=base64url_to_bytes(r["credential_id"]))
+             for r in rows]
+    options = generate_authentication_options(
+        rp_id=WEBAUTHN_RP_ID,
+        allow_credentials=allow,
+        user_verification=UserVerificationRequirement.PREFERRED,
+    )
+    CHALLENGES["login"] = options.challenge
+    return Response(content=options_to_json(options), media_type="application/json")
+
+@app.post("/api/webauthn/login/finish")
+async def wac_login_finish(request: Request, response: Response):
+    body = await request.json()
+    expected = CHALLENGES.pop("login", None)
+    if not expected:
+        raise HTTPException(400, "Challenge no encontrado")
+    raw_id = body.get("credential", {}).get("rawId") or body.get("rawId")
+    if not raw_id:
+        raise HTTPException(400, "Credencial invalida")
+    row = await pool.fetchrow(
+        "SELECT * FROM webauthn_credentials WHERE credential_id = $1", raw_id
+    )
+    if not row:
+        raise HTTPException(404, "Credencial desconocida")
+    try:
+        verification = verify_authentication_response(
+            credential=body["credential"],
+            expected_challenge=expected,
+            expected_origin=WEBAUTHN_ORIGIN,
+            expected_rp_id=WEBAUTHN_RP_ID,
+            credential_public_key=base64url_to_bytes(row["public_key"]),
+            credential_current_sign_count=row["sign_count"],
+            require_user_verification=False,
+        )
+    except Exception as e:
+        raise HTTPException(400, f"Autenticacion fallida: {e}")
+    await pool.execute(
+        "UPDATE webauthn_credentials SET sign_count = $1 WHERE credential_id = $2",
+        verification.new_sign_count, row["credential_id"],
+    )
+    # Crear sesion completa (level 2) directamente
+    token = secrets.token_urlsafe(32)
+    SESSIONS[token] = {"username": row["username"], "level": 2, "created_at": time.time()}
+    response.set_cookie("session", token, max_age=SESSION_TTL,
+                        httponly=True, secure=USE_HTTPS, samesite="strict", path="/")
+    return {"ok": True, "kind": row["kind"], "username": row["username"]}
+
+@app.get("/api/webauthn/list")
+async def wac_list(request: Request):
+    user = _session_user(request)
+    if not user:
+        raise HTTPException(401, "Sesion invalida")
+    rows = await pool.fetch(
+        "SELECT credential_id, kind, created_at FROM webauthn_credentials WHERE username = $1",
+        user,
+    )
+    return {"credentials": [{"id": r["credential_id"], "kind": r["kind"],
+                             "created_at": r["created_at"]} for r in rows]}
+
+@app.post("/api/webauthn/delete")
+async def wac_delete(request: Request):
+    user = _session_user(request)
+    if not user:
+        raise HTTPException(401, "Sesion invalida")
+    body = await request.json()
+    kind = (body.get("kind") or "").lower()
+    if kind not in ("chat", "ia"):
+        raise HTTPException(400, "kind invalido")
+    await pool.execute(
+        "DELETE FROM webauthn_credentials WHERE username = $1 AND kind = $2",
+        user, kind,
+    )
+    return {"ok": True}
 
 # ─── WebSocket ────────────────────────────────────────────────────────
 @app.websocket("/ws")

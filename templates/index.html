@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b141a">
 <title>Mensajeria</title>
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -308,6 +309,29 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   .bubble{max-width:88%}
   .auth-card{padding:30px 22px}
 }
+
+/* Modal de ajustes */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+.modal-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:100%;max-width:420px;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-card h2{font-size:18px;margin-bottom:18px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+.setting-label{flex:1;min-width:0}
+.setting-label > div:first-child{font-size:15px}
+.setting-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.switch{position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:#3b4a54;border-radius:13px;transition:.2s;cursor:pointer}
+.switch span::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked + span{background:var(--accent)}
+.switch input:checked + span::before{transform:translateX(18px)}
+.setting-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.setting-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--input);padding:12px 14px;border-radius:10px;font-size:14px;text-align:left;width:100%}
+.setting-btn:hover{background:#33424b}
+.fp-status{color:var(--text2);font-size:12px}
+.fp-status.ok{color:var(--accent)}
+.modal-foot{margin-top:18px;display:flex;justify-content:flex-end}
+.modal-foot .link{margin:0;width:auto;padding:8px 14px;background:var(--input);border-radius:8px}
+
 </style>
 </head>
 <body>
@@ -328,6 +352,15 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
       <button type="submit">Continuar</button>
       <div class="err" id="err-login"></div>
     </form>
+    <button type="button" class="link hidden" id="btn-fingerprint" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 11v2a6 6 0 0 1-1 3.5"/>
+        <path d="M8 12a4 4 0 0 1 8 0v2a8 8 0 0 1-1.5 4.5"/>
+        <path d="M5 13a7 7 0 0 1 14 0v2a10 10 0 0 1-1.5 5"/>
+        <path d="M2 14a10 10 0 0 1 20 0"/>
+      </svg>
+      <span>Inicio rapido con huella</span>
+    </button>
     <p class="note">Los mensajes se conservan hasta que pulses el boton de borrar.</p>
   </div>
 </section>
@@ -380,6 +413,12 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
         <div class="name" id="peer-name">&mdash;</div>
         <div class="peer-status" id="peer-status">desconectado</div>
       </div>
+      <button class="icon-btn" id="btn-settings" title="Ajustes">
+        <svg viewBox="0 0 24 24" class="outline">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
       <button class="icon-btn danger" id="btn-clear-all" title="Borrar todos los mensajes">
         <svg viewBox="0 0 24 24" class="outline">
           <polyline points="3 6 5 6 21 6"/>
@@ -430,6 +469,33 @@ input{font:inherit;border:0;outline:none;background:transparent;color:inherit;fo
   </main>
 </section>
 
+
+<div class="modal hidden" id="settings-modal">
+  <div class="modal-card">
+    <h2>Ajustes</h2>
+    <div class="setting-row">
+      <div class="setting-label">
+        <div>Inicio rapido con huella</div>
+        <div class="setting-sub">Registra tu huella para entrar sin escribir</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="sw-fingerprint"><span></span></label>
+    </div>
+    <div class="setting-actions" id="fp-actions" style="display:none">
+      <button class="setting-btn" id="fp-register-chat">
+        <span>Registrar huella para el chat</span>
+        <span class="fp-status" id="fp-status-chat">No registrada</span>
+      </button>
+      <button class="setting-btn" id="fp-register-ia">
+        <span>Registrar huella para IA</span>
+        <span class="fp-status" id="fp-status-ia">No registrada</span>
+      </button>
+    </div>
+    <div class="modal-foot">
+      <button class="link" id="btn-close-settings">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast hidden" id="toast"></div>
 
 <script>
@@ -473,6 +539,42 @@ function toast(msg, ms){
 
 const SVG_CHECK_1 = '<svg viewBox="0 0 16 11"><path fill="currentColor" d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636L1.792 6.09a.46.46 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.164-.336l-.363-.308z"/></svg>';
 const SVG_CHECK_2 = '<svg viewBox="0 0 16 11"><path fill="currentColor" d="M15.01.368l-.816-.643a.504.504 0 0 0-.334-.129.522.522 0 0 0-.397.19L8.324 6.479 7.29 5.413a.5.5 0 0 0-.334-.14.51.51 0 0 0-.36.145l-.328.329a.462.462 0 0 0-.15.343c0 .137.05.254.15.354l1.74 1.74a.68.68 0 0 0 .5.194.66.66 0 0 0 .534-.266l5.835-7.393a.531.531 0 0 0 .127-.34.469.469 0 0 0-.176-.348zM11.06.67a.463.463 0 0 0-.335-.135.504.504 0 0 0-.382.188L4.96 6.19 3.42 5.294a.463.463 0 0 0-.336-.14.51.51 0 0 0-.36.146l-.328.329a.462.462 0 0 0-.15.343c0 .136.05.254.15.353l2.326 2.327a.67.67 0 0 0 .5.202.66.66 0 0 0 .534-.266l5.834-7.393a.532.532 0 0 0 .128-.34.469.469 0 0 0-.176-.348L11.06.67z"/></svg>';
+
+
+// ── Service Worker + Notificaciones ──
+let swReg = null;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').then(r => { swReg = r; }).catch(()=>{});
+}
+async function ensureNotifyPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const p = await Notification.requestPermission();
+  return p === 'granted';
+}
+async function notifyMessage() {
+  // Notificación generica: NUNCA muestra el contenido del mensaje.
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (document.visibilityState === 'visible' && document.hasFocus()) return;
+
+  const opts = {
+    body: 'Tienes un mensaje nuevo',
+    icon:  '/static/icon.svg',
+    badge: '/static/icon.svg',
+    tag:   'nuevo-mensaje',
+    renotify: true,
+    silent: false,
+    requireInteraction: false,
+  };
+  try {
+    if (swReg) {
+      await swReg.showNotification('Mensajeria', opts);
+    } else {
+      new Notification('Mensajeria', opts);
+    }
+  } catch (e) {}
+}
 
 const state = {
   me:null, peer:null, peerOnline:false,
@@ -524,6 +626,9 @@ $('form-pin').addEventListener('submit', async ev => {
     await postForm('/api/pin', { pin: f.pin.value.trim() });
     const me = await getJSON('/api/me');
     await enterApp(me);
+    // Pedir permiso de notificaciones tras el login exitoso
+    try { await ensureNotifyPermission(); } catch(e){}
+
   } catch(e){ $('err-pin').textContent = e.message; f.pin.value=''; f.pin.focus(); }
   finally { btn.disabled = false; }
 });
@@ -631,6 +736,10 @@ function handleEvent(d){
 }
 function onIncoming(d){
   const id = d.message_id;
+  // Notificar si es del peer y no estamos mirando
+  if (d.from && d.from !== state.me) {
+    notifyMessage();
+  }
   if (state.msgs.has(id)) {
     const m = state.msgs.get(id);
     if (d.status && d.status !== m.status) { m.status = d.status; renderMessage(m); }
@@ -916,11 +1025,20 @@ function openCtx(msg, x, y){
   closeCtx();
   const m = document.createElement('div');
   m.className = 'ctx-menu';
-  m.innerHTML = '<button type="button" data-a="reply"><svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg><span>Responder</span></button>';
+  m.innerHTML =
+    '<button type="button" data-a="reply"><svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg><span>Responder</span></button>' +
+    '<button type="button" data-a="copy"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copiar</span></button>';
   m.addEventListener('click', ev => {
     const b = ev.target.closest('button');
     if (!b) return;
     if (b.dataset.a === 'reply') startReply(msg);
+    if (b.dataset.a === 'copy') {
+      navigator.clipboard.writeText(msg.text).then(() => {
+        toast('Mensaje copiado');
+      }).catch(() => {
+        toast('No se pudo copiar');
+      });
+    }
     closeCtx();
   });
   document.body.appendChild(m);
@@ -1027,6 +1145,170 @@ resetIdle();
     else if (me.authenticated && me.level === 1) showPanel('pin');
     else showPanel('login');
   } catch(e){ showPanel('login'); }
+})();
+
+/* ══ WebAuthn: funciones auxiliares ══ */
+function b64urlToBuf(s) {
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while (s.length % 4) s += '=';
+  const raw = atob(s);
+  const buf = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+  return buf.buffer;
+}
+function bufToB64url(buf) {
+  const bytes = new Uint8Array(buf);
+  let str = '';
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function webauthnRegister(kind) {
+  const begin = await fetch('/api/webauthn/register/begin', { method:'POST', credentials:'same-origin' });
+  if (!begin.ok) { toast('Error: ' + begin.status); return; }
+  const options = await begin.json();
+  options.challenge = b64urlToBuf(options.challenge);
+  options.user.id    = b64urlToBuf(options.user.id);
+  if (options.excludeCredentials) {
+    options.excludeCredentials = options.excludeCredentials.map(c => ({
+      ...c, id: b64urlToBuf(c.id)
+    }));
+  }
+  let credential;
+  try {
+    credential = await navigator.credentials.create({ publicKey: options });
+  } catch (e) { toast('Cancelado'); return; }
+  const attestation = {
+    id: credential.id,
+    rawId: bufToB64url(credential.rawId),
+    type: credential.type,
+    response: {
+      clientDataJSON: bufToB64url(credential.response.clientDataJSON),
+      attestationObject: bufToB64url(credential.response.attestationObject),
+    },
+    clientExtensionResults: credential.getClientExtensionResults(),
+  };
+  const finish = await fetch('/api/webauthn/register/finish', {
+    method:'POST', credentials:'same-origin',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({ credential: attestation, kind: kind }),
+  });
+  if (!finish.ok) { toast('Error al guardar: ' + finish.status); return; }
+  toast('Huella registrada');
+  await refreshFingerprintStatus();
+}
+
+async function webauthnLogin() {
+  const begin = await fetch('/api/webauthn/login/begin', { method:'POST', credentials:'same-origin' });
+  if (begin.status === 404) { toast('No hay huellas registradas'); return; }
+  if (!begin.ok) { toast('Error: ' + begin.status); return; }
+  const options = await begin.json();
+  options.challenge = b64urlToBuf(options.challenge);
+  if (options.allowCredentials) {
+    options.allowCredentials = options.allowCredentials.map(c => ({
+      ...c, id: b64urlToBuf(c.id)
+    }));
+  }
+  let assertion;
+  try {
+    assertion = await navigator.credentials.get({ publicKey: options });
+  } catch (e) { return; }
+  const payload = {
+    credential: {
+      id: assertion.id,
+      rawId: bufToB64url(assertion.rawId),
+      type: assertion.type,
+      response: {
+        clientDataJSON:    bufToB64url(assertion.response.clientDataJSON),
+        authenticatorData: bufToB64url(assertion.response.authenticatorData),
+        signature:         bufToB64url(assertion.response.signature),
+        userHandle: assertion.response.userHandle
+          ? bufToB64url(assertion.response.userHandle) : null,
+      },
+      clientExtensionResults: assertion.getClientExtensionResults(),
+    },
+    rawId: bufToB64url(assertion.rawId),
+  };
+  const finish = await fetch('/api/webauthn/login/finish', {
+    method:'POST', credentials:'same-origin',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (!finish.ok) { toast('Fallo de autenticacion'); return; }
+  const data = await finish.json();
+  if (data.kind === 'ia') {
+    location.href = '/ia';
+  } else {
+    const me = await getJSON('/api/me');
+    await enterApp(me);
+  }
+}
+
+async function refreshFingerprintStatus() {
+  try {
+    const r = await fetch('/api/webauthn/list', { credentials:'same-origin' });
+    if (!r.ok) return;
+    const data = await r.json();
+    const creds = data.credentials || [];
+    const chat = creds.find(c => c.kind === 'chat');
+    const ia   = creds.find(c => c.kind === 'ia');
+    const sc = document.getElementById('fp-status-chat');
+    const si = document.getElementById('fp-status-ia');
+    if (sc) { sc.textContent = chat ? 'Registrada' : 'No registrada'; sc.classList.toggle('ok', !!chat); }
+    if (si) { si.textContent = ia   ? 'Registrada' : 'No registrada'; si.classList.toggle('ok', !!ia); }
+    // Mostrar boton de huella en login solo si hay alguna
+    const btnFP = document.getElementById('btn-fingerprint');
+    if (btnFP) btnFP.style.display = creds.length ? 'flex' : 'none';
+  } catch(e) {}
+}
+
+// Comprobar al arrancar si hay credenciales para mostrar el boton en login
+(async () => {
+  try {
+    const r = await fetch('/api/webauthn/login/begin', { method:'POST', credentials:'same-origin' });
+    const btnFP = document.getElementById('btn-fingerprint');
+    if (btnFP && r.ok) btnFP.style.display = 'flex';
+  } catch(e) {}
+})();
+
+// Boton huella en login
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#btn-fingerprint')) webauthnLogin();
+});
+
+// Ajustes: abrir/cerrar
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#btn-settings')) {
+    const m = document.getElementById('settings-modal');
+    if (m) { m.classList.remove('hidden'); refreshFingerprintStatus(); }
+  }
+  if (e.target.closest('#btn-close-settings')) {
+    const m = document.getElementById('settings-modal');
+    if (m) m.classList.add('hidden');
+  }
+  if (e.target.closest('#fp-register-chat')) webauthnRegister('chat');
+  if (e.target.closest('#fp-register-ia'))   webauthnRegister('ia');
+});
+
+// Toggle de huella en ajustes
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'sw-fingerprint') {
+    const actions = document.getElementById('fp-actions');
+    if (actions) actions.style.display = e.target.checked ? 'flex' : 'none';
+    try { localStorage.setItem('fp_enabled', e.target.checked ? '1' : '0'); } catch(er){}
+  }
+});
+// Restaurar estado del toggle
+(function(){
+  try {
+    const v = localStorage.getItem('fp_enabled');
+    if (v === '1') {
+      const sw = document.getElementById('sw-fingerprint');
+      const ac = document.getElementById('fp-actions');
+      if (sw) sw.checked = true;
+      if (ac) ac.style.display = 'flex';
+    }
+  } catch(e){}
 })();
 </script>
 </body>
