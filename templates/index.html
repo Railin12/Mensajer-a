@@ -243,15 +243,6 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
   .bubble{max-width:88%}
   .auth-card{padding:30px 22px}
 }
-
-.kind-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
-.kind-opt{position:relative;display:flex;align-items:center;justify-content:center;
-  background:var(--input);padding:11px 10px;border-radius:10px;cursor:pointer;
-  font-size:13.5px;transition:background .15s}
-.kind-opt input{position:absolute;opacity:0;pointer-events:none}
-.kind-opt span{color:var(--text2);transition:color .15s}
-.kind-opt input:checked + span{color:var(--text);font-weight:500}
-.kind-opt:has(input:checked){background:#1f4d40;box-shadow:inset 0 0 0 1.5px var(--accent)}
 </style>
 </head>
 <body>
@@ -322,16 +313,7 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
       <p class="sub">Verifica tu identidad para generar uno</p>
 
       <form id="form-generate">
-        <div class="kind-selector">
-          <label class="kind-opt">
-            <input type="radio" name="kind" value="chat" checked>
-            <span>Acceso al chat</span>
-          </label>
-          <label class="kind-opt">
-            <input type="radio" name="kind" value="ia">
-            <span>Acceso a IA</span>
-          </label>
-        </div>
+        <input type="hidden"   name="kind" value="ia">
         <input type="text"     name="username" placeholder="Usuario" required autocapitalize="off">
         <input type="password" name="password" placeholder="Contrasena" required>
         <input type="password" name="pin" placeholder="PIN" inputmode="numeric"
@@ -1404,7 +1386,7 @@ document.addEventListener('submit', async (e) => {
   if (e.target.id !== 'form-generate') return;
   e.preventDefault();
   const f = e.target;
-  const kind = f.querySelector('input[name=kind]:checked').value;
+  const kind = 'ia';
   $('err-generate').textContent = '';
   const btn = f.querySelector('button[type=submit]');
   btn.disabled = true;
@@ -1416,8 +1398,7 @@ document.addEventListener('submit', async (e) => {
       kind: kind,
     });
     $('gen-kind-label').textContent =
-      'Token para: ' + (r.kind === 'ia' ? 'IA' : 'chat') +
-      ' (' + r.username + ')';
+      'Token generado para ' + r.username;
     $('gen-token-text').textContent = r.token;
     $('gen-result').classList.remove('hidden');
     try { await navigator.clipboard.writeText(r.token); } catch(er){}
