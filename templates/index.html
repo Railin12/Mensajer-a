@@ -243,6 +243,15 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
   .bubble{max-width:88%}
   .auth-card{padding:30px 22px}
 }
+
+.kind-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.kind-opt{position:relative;display:flex;align-items:center;justify-content:center;
+  background:var(--input);padding:11px 10px;border-radius:10px;cursor:pointer;
+  font-size:13.5px;transition:background .15s}
+.kind-opt input{position:absolute;opacity:0;pointer-events:none}
+.kind-opt span{color:var(--text2);transition:color .15s}
+.kind-opt input:checked + span{color:var(--text);font-weight:500}
+.kind-opt:has(input:checked){background:#1f4d40;box-shadow:inset 0 0 0 1.5px var(--accent)}
 </style>
 </head>
 <body>
@@ -250,38 +259,100 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
 <!-- ══ Pantalla 1: Token ══ -->
 <section id="panel-token" class="panel">
   <div class="auth-card">
-    <div class="auth-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-           stroke-linecap="round" stroke-linejoin="round" width="52" height="52">
-        <rect x="3" y="11" width="18" height="11" rx="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-      </svg>
+
+    <!-- ─── Vista 1: pegar token ─── -->
+    <div id="token-view">
+      <div class="auth-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" width="52" height="52">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h1>Acceso</h1>
+      <p class="sub">Pega tu token de acceso</p>
+      <form id="form-token" autocomplete="off">
+        <input type="text" name="token" placeholder="Token de acceso"
+               autocapitalize="off" autocomplete="off" required>
+        <button type="submit">Acceder</button>
+        <div class="err" id="err-token"></div>
+      </form>
+
+      <button type="button" class="link" id="btn-show-generate"
+              style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Crear token nuevo</span>
+      </button>
+
+      <button type="button" class="link hidden" id="btn-fingerprint"
+              style="display:none;align-items:center;justify-content:center;gap:8px;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 11v2a6 6 0 0 1-1 3.5"/>
+          <path d="M8 12a4 4 0 0 1 8 0v2a8 8 0 0 1-1.5 4.5"/>
+          <path d="M5 13a7 7 0 0 1 14 0v2a10 10 0 0 1-1.5 5"/>
+          <path d="M2 14a10 10 0 0 1 20 0"/>
+        </svg>
+        <span>Inicio rapido con huella</span>
+      </button>
+
+      <p class="note">Al acceder aceptas las <a href="/politicas" target="_blank"
+         style="color:var(--accent);text-decoration:none">politicas y condiciones</a>.</p>
+      <div id="embedded-warning" class="hidden" style="margin-top:18px;padding:14px;background:rgba(241,92,109,.1);border:1px solid rgba(241,92,109,.3);border-radius:10px;font-size:12.5px;line-height:1.5;color:#ffb0b8">
+        <strong style="color:#ff7a8a">Aviso</strong><br>
+        Estas abriendo esto dentro de otra aplicacion. Las funciones de seguridad (huella, notificaciones) no funcionan aqui.<br>
+        <a href="#" id="open-chrome" style="color:#00a884;text-decoration:underline;display:inline-block;margin-top:6px">Abrir en Chrome</a>
+      </div>
     </div>
-    <h1>Acceso</h1>
-    <p class="sub">Pega tu token de acceso</p>
-    <form id="form-token" autocomplete="off">
-      <input type="text" name="token" placeholder="Token de acceso"
-             autocapitalize="off" autocomplete="off" required>
-      <button type="submit">Acceder</button>
-      <div class="err" id="err-token"></div>
-    </form>
-    <button type="button" class="link" id="btn-fingerprint" style="display:none;align-items:center;justify-content:center;gap:8px;">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 11v2a6 6 0 0 1-1 3.5"/>
-        <path d="M8 12a4 4 0 0 1 8 0v2a8 8 0 0 1-1.5 4.5"/>
-        <path d="M5 13a7 7 0 0 1 14 0v2a10 10 0 0 1-1.5 5"/>
-        <path d="M2 14a10 10 0 0 1 20 0"/>
-      </svg>
-      <span>Inicio rapido con huella</span>
-    </button>
-    <p class="note">Al acceder aceptas las <a href="/politicas" target="_blank"
-       style="color:var(--accent);text-decoration:none">politicas y condiciones</a>.</p>
-    <div id="embedded-warning" class="hidden" style="margin-top:18px;padding:14px;background:rgba(241,92,109,.1);border:1px solid rgba(241,92,109,.3);border-radius:10px;font-size:12.5px;line-height:1.5;color:#ffb0b8">
-      <strong style="color:#ff7a8a">Aviso</strong><br>
-      Estas abriendo esto dentro de otra aplicacion. Las funciones de seguridad (huella, notificaciones) no funcionan aqui.<br>
-      <a href="#" id="open-chrome" style="color:#00a884;text-decoration:underline;display:inline-block;margin-top:6px">Abrir en Chrome</a>
+
+    <!-- ─── Vista 2: generar token ─── -->
+    <div id="generate-view" class="hidden">
+      <div class="auth-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" width="52" height="52">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+      <h1>Crear token</h1>
+      <p class="sub">Verifica tu identidad para generar uno</p>
+
+      <form id="form-generate">
+        <div class="kind-selector">
+          <label class="kind-opt">
+            <input type="radio" name="kind" value="chat" checked>
+            <span>Acceso al chat</span>
+          </label>
+          <label class="kind-opt">
+            <input type="radio" name="kind" value="ia">
+            <span>Acceso a IA</span>
+          </label>
+        </div>
+        <input type="text"     name="username" placeholder="Usuario" required autocapitalize="off">
+        <input type="password" name="password" placeholder="Contrasena" required>
+        <input type="password" name="pin" placeholder="PIN" inputmode="numeric"
+               pattern="[0-9]{4,8}" required maxlength="8">
+        <button type="submit">Generar token</button>
+        <div class="err" id="err-generate"></div>
+      </form>
+
+      <div id="gen-result" class="hidden" style="margin-top:16px">
+        <div class="token-kind" id="gen-kind-label"></div>
+        <div class="token-box" id="gen-token-text"></div>
+        <button type="button" class="token-copy" id="gen-copy">Copiar token</button>
+        <button type="button" class="link" id="btn-use-now"
+                style="background:var(--accent);color:#062e26;font-weight:600;padding:12px;border-radius:10px;margin-top:8px">
+          Usar este token ahora
+        </button>
+      </div>
+
+      <button type="button" class="link" id="btn-back-to-token">Volver al acceso</button>
     </div>
+
   </div>
 </section>
 
@@ -1296,6 +1367,66 @@ resetIdle();
     }
   } catch(e){}
 })();
+
+/* ══ Generar token desde la pantalla de acceso ══ */
+function showGenerateView(){
+  $('token-view').classList.add('hidden');
+  $('generate-view').classList.remove('hidden');
+  $('gen-result').classList.add('hidden');
+  $('form-generate').reset();
+  $('err-generate').textContent = '';
+}
+function showTokenView(){
+  $('generate-view').classList.add('hidden');
+  $('token-view').classList.remove('hidden');
+}
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('#btn-show-generate')) { showGenerateView(); return; }
+  if (e.target.closest('#btn-back-to-token')) { showTokenView(); return; }
+  if (e.target.closest('#gen-copy')) {
+    const t = $('gen-token-text').textContent.trim();
+    if (!t) return;
+    try { await navigator.clipboard.writeText(t); toast('Token copiado'); }
+    catch(er) { toast('No se pudo copiar'); }
+    return;
+  }
+  if (e.target.closest('#btn-use-now')) {
+    const t = $('gen-token-text').textContent.trim();
+    if (!t) return;
+    $('form-token').token.value = t;
+    showTokenView();
+    $('form-token').requestSubmit();
+    return;
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'form-generate') return;
+  e.preventDefault();
+  const f = e.target;
+  const kind = f.querySelector('input[name=kind]:checked').value;
+  $('err-generate').textContent = '';
+  const btn = f.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    const r = await postForm('/api/token/generate-public', {
+      username: f.username.value.trim(),
+      password: f.password.value,
+      pin: f.pin.value.trim(),
+      kind: kind,
+    });
+    $('gen-kind-label').textContent =
+      'Token para: ' + (r.kind === 'ia' ? 'IA' : 'chat') +
+      ' (' + r.username + ')';
+    $('gen-token-text').textContent = r.token;
+    $('gen-result').classList.remove('hidden');
+    try { await navigator.clipboard.writeText(r.token); } catch(er){}
+  } catch (err) {
+    $('err-generate').textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 </script>
 </body>
 </html>

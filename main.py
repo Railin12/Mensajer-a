@@ -253,6 +253,37 @@ async def token_login(request: Request, response: Response, token: str = Form(..
                         secure=USE_HTTPS, samesite="strict", path="/")
     return {"ok": True, "kind": row["kind"], "username": row["username"]}
 
+@app.post("/api/token/generate-public")
+async def token_generate_public(
+    username: str = Form(...),
+    password: str = Form(...),
+    pin: str = Form(...),
+    kind: str = Form("chat"),
+):
+    """Genera un token SIN necesidad de sesion previa. Pide usuario+password+PIN."""
+    username = username.strip()
+    kind = (kind or "chat").lower()
+    if kind not in ("chat", "ia"): kind = "chat"
+
+    stored = USERS.get(username)
+    if not (stored and verify_password(password, stored["hash"])):
+        await asyncio.sleep(0.4)
+        raise HTTPException(401, "Credenciales incorrectas")
+
+    expected_pin = stored.get("pin", "")
+    if not secrets.compare_digest(expected_pin, pin.strip()):
+        await asyncio.sleep(0.4)
+        raise HTTPException(401, "PIN incorrecto")
+
+    # Reemplaza el token anterior de ese usuario (uno solo por usuario)
+    await pool.execute("DELETE FROM access_tokens WHERE username = $1", username)
+    tok = secrets.token_urlsafe(24)
+    await pool.execute(
+        "INSERT INTO access_tokens (token, username, kind, created_at) VALUES ($1,$2,$3,$4)",
+        tok, username, kind, int(time.time()),
+    )
+    return {"ok": True, "token": tok, "kind": kind, "username": username}
+
 @app.post("/api/token/generate")
 async def token_generate(request: Request):
     t = request.cookies.get("session")
