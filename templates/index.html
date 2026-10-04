@@ -250,6 +250,20 @@ input,textarea{font:inherit;border:0;outline:none;background:transparent;color:i
   transition:filter .15s}
 .btn-generate-main:hover{filter:brightness(1.06)}
 .btn-generate-main:disabled{opacity:.55;cursor:wait}
+
+/* ══ Escudo de privacidad ══ */
+#privacy-shield{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  background:#0b141a;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  transition:none;
+}
+#privacy-shield.on{display:flex}
+#privacy-shield svg{opacity:.4}
 </style>
 </head>
 <body>
@@ -1324,12 +1338,16 @@ resetIdle();
 /* Bootstrap: ¿ya hay sesion? */
 (async () => {
   const wantsLogin = new URLSearchParams(location.search).get('login') === '1';
-  try {
-    const me = await getJSON('/api/me');
-    if (me.authenticated && me.level >= 2) await enterApp(me);
-    else if (me.authenticated && me.level === 1) showPanel('pin');
-    else showPanel(wantsLogin ? 'login' : 'token');
-  } catch(e){ showPanel(wantsLogin ? 'login' : 'token'); }
+  let me = { authenticated: false, level: 0 };
+  try { me = await getJSON('/api/me'); } catch(e){}
+
+  // NUNCA auto-entrar. Siempre pantalla de token por defecto.
+  if (wantsLogin) {
+    if (me.authenticated && me.level === 1) showPanel('pin');
+    else showPanel('login');
+  } else {
+    showPanel('token');
+  }
 
   // Detectar navegador embebido
   try {
@@ -1413,6 +1431,79 @@ document.addEventListener('click', async (e) => {
     btn.disabled = false;
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   BLOQUEO POR CAMBIO DE PESTAÑA / APP
+   - Al perder visibilidad: escudo negro + limpiar chat + token
+   - Al volver: quitar escudo (sigue mostrando la pantalla de token)
+   ══════════════════════════════════════════════════════════════════ */
+(function(){
+  const shield = document.getElementById('privacy-shield');
+
+  function lockNow() {
+    if (shield) shield.classList.add('on');
+    // Solo hacemos limpieza si había chat abierto
+    if (!state.me) return;
+    try {
+      // Cerrar WS SIN reconexion automatica
+      if (state.ws) {
+        state.ws.onclose = null;
+        state.ws.onerror = null;
+        state.ws.onmessage = null;
+        try { state.ws.close(); } catch(e){}
+        state.ws = null;
+      }
+    } catch(e){}
+    // Limpiar estado
+    try { state.msgs.clear(); } catch(e){}
+    try {
+      state.dom.forEach(el => el.remove());
+      state.dom.clear();
+    } catch(e){}
+    try {
+      document.querySelectorAll('#messages .day-sep').forEach(el => el.remove());
+    } catch(e){}
+    state.lastDayKey = null;
+    state.me = null;
+    state.peer = null;
+    state.peerOnline = false;
+    state.replyTo = null;
+    // Mostrar pantalla de token
+    try { showPanel('token'); } catch(e){}
+  }
+
+  function unlockNow() {
+    if (shield) shield.classList.remove('on');
+  }
+
+  // visibilitychange es el evento más fiable en móvil
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') lockNow();
+    else unlockNow();
+  });
+
+  // blur/focus como respaldo (URL bar, cambio de app parcial)
+  window.addEventListener('blur', () => {
+    if (shield) shield.classList.add('on');
+  });
+  window.addEventListener('focus', () => {
+    if (shield && document.visibilityState === 'visible') {
+      shield.classList.remove('on');
+    }
+  });
+
+  // pagehide / freeze para cerrar la pestaña o congelarla
+  window.addEventListener('pagehide', lockNow);
+  document.addEventListener('freeze', lockNow);
+})();
 </script>
+
+<div id="privacy-shield">
+  <svg viewBox="0 0 24 24" width="72" height="72" fill="none" stroke="#00a884"
+       stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+</div>
 </body>
 </html>
